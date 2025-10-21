@@ -32,6 +32,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
   final FocusNode _bodyFocusNode = FocusNode();
+  int? _selectedResultIndex; // Track selected search result
 
   @override
   void initState() {
@@ -81,6 +82,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
   void _filterNotes(String query) {
     setState(() {
       _searchQuery = query;
+      _selectedResultIndex = null; // Reset selection when search changes
       if (query.isEmpty) {
         _filteredNotes = _notes;
       } else {
@@ -92,6 +94,22 @@ class _ListViewScreenState extends State<ListViewScreen> {
         }).toList();
       }
     });
+  }
+
+  Future<void> _navigateToNote(Note note) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ViewScreen(
+          noteService: widget.noteService,
+          noteId: note.id,
+          onThemeChanged: widget.onThemeChanged,
+          currentThemeMode: widget.currentThemeMode,
+        ),
+      ),
+    );
+    // Reload notes when returning
+    _loadNotes();
   }
 
   void _handleAddNoteShortcut() async {
@@ -272,28 +290,45 @@ class _ListViewScreenState extends State<ListViewScreen> {
           preferredSize: const Size.fromHeight(60),
           child: Padding(
             padding: const EdgeInsets.all(8.0),
-            child: TextField(
-              controller: _searchController,
-              focusNode: _searchFocusNode,
-              decoration: InputDecoration(
-                hintText: 'Search notes...',
-                prefixIcon: const Icon(Icons.search),
-                suffixIcon: _searchQuery.isNotEmpty
-                    ? IconButton(
-                        icon: const Icon(Icons.clear),
-                        onPressed: () {
-                          _searchController.clear();
-                          _filterNotes('');
-                        },
-                      )
-                    : null,
-                border: OutlineInputBorder(
-                  borderRadius: BorderRadius.circular(8),
+            child: Focus(
+              onKeyEvent: (node, event) {
+                if (event is KeyDownEvent) {
+                  // Tab: move to first result
+                  if (event.logicalKey == LogicalKeyboardKey.tab && !HardwareKeyboard.instance.isShiftPressed) {
+                    if (_filteredNotes.isNotEmpty) {
+                      setState(() {
+                        _selectedResultIndex = 0;
+                      });
+                      _bodyFocusNode.requestFocus();
+                      return KeyEventResult.handled;
+                    }
+                  }
+                }
+                return KeyEventResult.ignored;
+              },
+              child: TextField(
+                controller: _searchController,
+                focusNode: _searchFocusNode,
+                decoration: InputDecoration(
+                  hintText: 'Search notes...',
+                  prefixIcon: const Icon(Icons.search),
+                  suffixIcon: _searchQuery.isNotEmpty
+                      ? IconButton(
+                          icon: const Icon(Icons.clear),
+                          onPressed: () {
+                            _searchController.clear();
+                            _filterNotes('');
+                          },
+                        )
+                      : null,
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  filled: true,
+                  fillColor: Theme.of(context).colorScheme.surface,
                 ),
-                filled: true,
-                fillColor: Theme.of(context).colorScheme.surface,
+                onChanged: _filterNotes,
               ),
-              onChanged: _filterNotes,
             ),
           ),
         ),
@@ -306,6 +341,68 @@ class _ListViewScreenState extends State<ListViewScreen> {
             // Handle '/' key to focus search bar when body is focused
             if (event.character == '/' && !_searchFocusNode.hasFocus) {
               _searchFocusNode.requestFocus();
+              setState(() => _selectedResultIndex = null);
+              return KeyEventResult.handled;
+            }
+
+            // Only handle navigation keys if we have results
+            if (_filteredNotes.isEmpty) {
+              return KeyEventResult.ignored;
+            }
+
+            // Tab: move to next result
+            if (event.logicalKey == LogicalKeyboardKey.tab && !HardwareKeyboard.instance.isShiftPressed) {
+              setState(() {
+                if (_selectedResultIndex == null) {
+                  _selectedResultIndex = 0;
+                } else {
+                  _selectedResultIndex = (_selectedResultIndex! + 1) % _filteredNotes.length;
+                }
+              });
+              return KeyEventResult.handled;
+            }
+
+            // Shift+Tab: move to previous result or back to search
+            if (event.logicalKey == LogicalKeyboardKey.tab && HardwareKeyboard.instance.isShiftPressed) {
+              if (_selectedResultIndex == null || _selectedResultIndex == 0) {
+                // Go back to search bar
+                _searchFocusNode.requestFocus();
+                setState(() => _selectedResultIndex = null);
+              } else {
+                setState(() {
+                  _selectedResultIndex = _selectedResultIndex! - 1;
+                });
+              }
+              return KeyEventResult.handled;
+            }
+
+            // Down arrow or j: move to next result
+            if (event.logicalKey == LogicalKeyboardKey.arrowDown || event.character == 'j') {
+              setState(() {
+                if (_selectedResultIndex == null) {
+                  _selectedResultIndex = 0;
+                } else if (_selectedResultIndex! < _filteredNotes.length - 1) {
+                  _selectedResultIndex = _selectedResultIndex! + 1;
+                }
+              });
+              return KeyEventResult.handled;
+            }
+
+            // Up arrow or k: move to previous result
+            if (event.logicalKey == LogicalKeyboardKey.arrowUp || event.character == 'k') {
+              setState(() {
+                if (_selectedResultIndex == null) {
+                  _selectedResultIndex = _filteredNotes.length - 1;
+                } else if (_selectedResultIndex! > 0) {
+                  _selectedResultIndex = _selectedResultIndex! - 1;
+                }
+              });
+              return KeyEventResult.handled;
+            }
+
+            // Enter: open selected result
+            if (event.logicalKey == LogicalKeyboardKey.enter && _selectedResultIndex != null) {
+              _navigateToNote(_filteredNotes[_selectedResultIndex!]);
               return KeyEventResult.handled;
             }
           }
@@ -334,15 +431,24 @@ class _ListViewScreenState extends State<ListViewScreen> {
                     itemCount: _filteredNotes.length,
                     itemBuilder: (context, index) {
                       final note = _filteredNotes[index];
+                      final isSelected = _selectedResultIndex == index;
                       return Card(
                         margin: const EdgeInsets.symmetric(
                           horizontal: 8,
                           vertical: 4,
                         ),
+                        color: isSelected
+                            ? Theme.of(context).colorScheme.primaryContainer
+                            : null,
                         child: ListTile(
                           title: Text(
                             note.title,
-                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.onPrimaryContainer
+                                  : null,
+                            ),
                           ),
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
@@ -353,6 +459,9 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                     : note.text,
                                 maxLines: 2,
                                 overflow: TextOverflow.ellipsis,
+                                style: isSelected
+                                    ? TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer)
+                                    : null,
                               ),
                               const SizedBox(height: 4),
                               if (note.tags.isNotEmpty)
@@ -375,23 +484,13 @@ class _ListViewScreenState extends State<ListViewScreen> {
                           ),
                           trailing: Text(
                             _formatDate(note.mtime),
-                            style: Theme.of(context).textTheme.bodySmall,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                              color: isSelected
+                                  ? Theme.of(context).colorScheme.onPrimaryContainer
+                                  : null,
+                            ),
                           ),
-                          onTap: () async {
-                            await Navigator.push(
-                              context,
-                              MaterialPageRoute(
-                                builder: (context) => ViewScreen(
-                                  noteService: widget.noteService,
-                                  noteId: note.id,
-                                  onThemeChanged: widget.onThemeChanged,
-                                  currentThemeMode: widget.currentThemeMode,
-                                ),
-                              ),
-                            );
-                            // Reload notes when returning
-                            _loadNotes();
-                          },
+                          onTap: () => _navigateToNote(note),
                         ),
                       );
                     },
