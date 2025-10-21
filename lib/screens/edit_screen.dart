@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
+import '../widgets/note_markdown_viewer.dart';
 
 class EditScreen extends StatefulWidget {
   final NoteService noteService;
@@ -197,6 +197,9 @@ class _EditScreenState extends State<EditScreen> {
   }
 
   Widget _buildPreview() {
+    final title = _titleController.text.trim();
+    final text = _textController.text.trim();
+
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       child: Column(
@@ -204,7 +207,7 @@ class _EditScreenState extends State<EditScreen> {
         children: [
           // Title
           Text(
-            _titleController.text.trim(),
+            title,
             style: Theme.of(context).textTheme.headlineMedium?.copyWith(
                   fontWeight: FontWeight.bold,
                 ),
@@ -215,9 +218,15 @@ class _EditScreenState extends State<EditScreen> {
           const SizedBox(height: 16),
 
           // Markdown preview
-          MarkdownBody(
-            data: _textController.text.trim(),
-            selectable: true,
+          NoteMarkdownViewer(
+            text: text,
+            noteTitle: title,
+            onNoteLinkTap: (noteTitle) {
+              // Note links don't navigate in preview mode, just show a message
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Link to note: $noteTitle')),
+              );
+            },
           ),
         ],
       ),

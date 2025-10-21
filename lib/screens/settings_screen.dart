@@ -1,0 +1,182 @@
+import 'package:flutter/material.dart';
+import '../services/config_service.dart';
+
+class SettingsScreen extends StatefulWidget {
+  final ConfigService configService;
+
+  const SettingsScreen({super.key, required this.configService});
+
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
+  late TextEditingController _editorController;
+  AppConfig? _config;
+  bool _isLoading = true;
+  bool _isSaving = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _editorController = TextEditingController();
+    _loadConfig();
+  }
+
+  @override
+  void dispose() {
+    _editorController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _loadConfig() async {
+    setState(() => _isLoading = true);
+
+    final config = await widget.configService.loadConfig();
+
+    setState(() {
+      _config = config;
+      _editorController.text = config.defaultEditor;
+      _isLoading = false;
+    });
+  }
+
+  Future<void> _saveConfig() async {
+    if (_config == null) return;
+
+    setState(() => _isSaving = true);
+
+    try {
+      final updatedConfig = AppConfig(
+        directories: _config!.directories,
+        defaultEditor: _editorController.text.trim(),
+      );
+
+      await widget.configService.saveConfig(updatedConfig);
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Settings saved')),
+        );
+        Navigator.pop(context, true);
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error saving settings: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() => _isSaving = false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text('Settings'),
+        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          if (_isSaving)
+            const Center(
+              child: Padding(
+                padding: EdgeInsets.all(16.0),
+                child: SizedBox(
+                  width: 20,
+                  height: 20,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                ),
+              ),
+            )
+          else
+            IconButton(
+              icon: const Icon(Icons.save),
+              tooltip: 'Save',
+              onPressed: _saveConfig,
+            ),
+        ],
+      ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : SingleChildScrollView(
+              padding: const EdgeInsets.all(16),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Editor Settings',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Set your default editor name for new notes',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _editorController,
+                    decoration: const InputDecoration(
+                      labelText: 'Default Editor',
+                      hintText: 'Your name',
+                      border: OutlineInputBorder(),
+                      helperText: 'This will be used for all new notes',
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Storage',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Notes Directory',
+                    style: Theme.of(context).textTheme.titleSmall,
+                  ),
+                  const SizedBox(height: 4),
+                  if (_config != null)
+                    ...(_config!.directories.map((dir) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Text(
+                            dir,
+                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                                  fontFamily: 'monospace',
+                                ),
+                          ),
+                        ))),
+                  const SizedBox(height: 16),
+                  Card(
+                    color: Colors.blue.shade50,
+                    child: const Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Icon(Icons.info_outline, size: 20),
+                              SizedBox(width: 8),
+                              Text(
+                                'About Noteboat',
+                                style: TextStyle(fontWeight: FontWeight.bold),
+                              ),
+                            ],
+                          ),
+                          SizedBox(height: 8),
+                          Text('Version: 1.0.0'),
+                          Text('Notes are stored as markdown files with YAML frontmatter'),
+                          Text('You can edit them directly or sync with git'),
+                        ],
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+    );
+  }
+}

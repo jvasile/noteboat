@@ -107,7 +107,8 @@ class NoteService {
     if (!_initialized) await initialize();
 
     // Update derived fields (links and tags)
-    final links = LinkExtractor.extractAllLinks(note.text, note.extraFields);
+    // Exclude self-references from links
+    final links = LinkExtractor.extractAllLinks(note.text, note.extraFields, excludeTitle: note.title);
     final tags = TagExtractor.extractAllTags(note.text, note.extraFields);
 
     // Add current user to editors list if not already present

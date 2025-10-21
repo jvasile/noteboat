@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
+import '../widgets/note_markdown_viewer.dart';
 import 'edit_screen.dart';
 import 'list_view_screen.dart';
 
@@ -214,40 +214,14 @@ class _ViewScreenState extends State<ViewScreen> {
                         const SizedBox(height: 16),
                       ],
 
-                      // Links
-                      if (_note!.links.isNotEmpty) ...[
-                        Text(
-                          'Linked Notes:',
-                          style: Theme.of(context).textTheme.titleSmall,
-                        ),
-                        const SizedBox(height: 8),
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: _note!.links.map((link) {
-                            return ActionChip(
-                              label: Text(link),
-                              avatar: const Icon(Icons.link, size: 16),
-                              onPressed: () => _navigateToNote(link),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
                       const Divider(),
                       const SizedBox(height: 16),
 
                       // Markdown content
-                      MarkdownBody(
-                        data: _note!.text,
-                        selectable: true,
-                        onTapLink: (text, href, title) {
-                          if (href != null) {
-                            // Try to navigate to the linked note
-                            _navigateToNote(href);
-                          }
-                        },
+                      NoteMarkdownViewer(
+                        text: _note!.text,
+                        noteTitle: _note!.title,
+                        onNoteLinkTap: _navigateToNote,
                       ),
                     ],
                   ),

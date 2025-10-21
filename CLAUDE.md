@@ -2,6 +2,12 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## General Instructions
+
+ * Be terse
+ * Don't be sycophantic
+ * Don't make assumptions.  Ask followup questions.
+
 ## Project Overview
 
 Noteboat is a linked note-taking application with a hierarchical type system. It
