@@ -486,7 +486,11 @@ class _LinkedListNoteEditorState extends State<_LinkedListNoteEditor> {
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                   Text(
-                    '• Enter note titles (not IDs) for previous/next',
+                    '• Enter note titles for previous/next',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  ),
+                  Text(
+                    '• For non-unique titles, use: Title?id=xxx',
                     style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
                   ),
                 ],
