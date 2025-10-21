@@ -448,6 +448,14 @@ class _ViewScreenState extends State<ViewScreen> {
       autofocus: true,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
+          // Handle Escape or Alt+Left to go back
+          if (event.logicalKey == LogicalKeyboardKey.escape ||
+              (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
+                  HardwareKeyboard.instance.isAltPressed)) {
+            Navigator.pop(context);
+            return KeyEventResult.handled;
+          }
+
           // First, let the note type handler handle the event
           if (_note != null) {
             final handler = NoteTypeRegistry.instance.getHandler(_note!.types);
