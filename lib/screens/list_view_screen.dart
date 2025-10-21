@@ -153,7 +153,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
         // Note doesn't exist - create it with specified type
         final newNote = await widget.noteService.createNote(
           title: result,
-          text: '# $result\n\nStart writing here...',
+          text: '# $result\n\n',
           types: [noteType],
         );
 
@@ -474,7 +474,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                   spacing: 4,
                                   children: note.tags
                                       .take(3)
-                                      .map((tag) => Chip(
+                                      .map((tag) => ActionChip(
                                             label: Text(
                                               '#$tag',
                                               style: const TextStyle(fontSize: 10),
@@ -482,6 +482,12 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                             materialTapTargetSize:
                                                 MaterialTapTargetSize.shrinkWrap,
                                             padding: EdgeInsets.zero,
+                                            onPressed: () {
+                                              // Search for this tag
+                                              _searchController.text = '#$tag';
+                                              _filterNotes('#$tag');
+                                              _searchFocusNode.requestFocus();
+                                            },
                                           ))
                                       .toList(),
                                 ),

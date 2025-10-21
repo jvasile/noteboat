@@ -53,18 +53,67 @@ class NoteMarkdownViewer extends StatelessWidget {
   Widget build(BuildContext context) {
     final processedText = _processText(text, noteTitle);
 
-    // Create custom style sheet with user-specified base font size
-    final styleSheet = MarkdownStyleSheet(
-      p: TextStyle(fontSize: baseFontSize),
-      h1: TextStyle(fontSize: baseFontSize * 2.0, fontWeight: FontWeight.bold),
-      h2: TextStyle(fontSize: baseFontSize * 1.5, fontWeight: FontWeight.bold),
-      h3: TextStyle(fontSize: baseFontSize * 1.25, fontWeight: FontWeight.bold),
-      h4: TextStyle(fontSize: baseFontSize * 1.1, fontWeight: FontWeight.bold),
-      h5: TextStyle(fontSize: baseFontSize, fontWeight: FontWeight.bold),
-      h6: TextStyle(fontSize: baseFontSize * 0.9, fontWeight: FontWeight.bold),
-      code: TextStyle(fontSize: baseFontSize * 0.9, fontFamily: 'monospace'),
-      listBullet: TextStyle(fontSize: baseFontSize),
-      tableBody: TextStyle(fontSize: baseFontSize),
+    // Start with theme-based stylesheet and customize with user font size
+    final baseStyleSheet = MarkdownStyleSheet.fromTheme(Theme.of(context));
+    final styleSheet = baseStyleSheet.copyWith(
+      // Paragraph text
+      p: baseStyleSheet.p?.copyWith(fontSize: baseFontSize) ?? TextStyle(fontSize: baseFontSize),
+
+      // Headings with clear visual hierarchy
+      h1: TextStyle(
+        fontSize: baseFontSize * 2.5,
+        fontWeight: FontWeight.w900,
+        height: 1.3,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+      h1Padding: const EdgeInsets.only(top: 24, bottom: 12),
+
+      h2: TextStyle(
+        fontSize: baseFontSize * 2.0,
+        fontWeight: FontWeight.w700,
+        height: 1.3,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+      h2Padding: const EdgeInsets.only(top: 20, bottom: 10),
+
+      h3: TextStyle(
+        fontSize: baseFontSize * 1.5,
+        fontWeight: FontWeight.w700,
+        height: 1.3,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+      h3Padding: const EdgeInsets.only(top: 16, bottom: 8),
+
+      h4: TextStyle(
+        fontSize: baseFontSize * 1.25,
+        fontWeight: FontWeight.w600,
+        height: 1.3,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+      h4Padding: const EdgeInsets.only(top: 14, bottom: 6),
+
+      h5: TextStyle(
+        fontSize: baseFontSize * 1.1,
+        fontWeight: FontWeight.w600,
+        height: 1.3,
+        color: Theme.of(context).colorScheme.onSurface,
+      ),
+      h5Padding: const EdgeInsets.only(top: 12, bottom: 4),
+
+      h6: TextStyle(
+        fontSize: baseFontSize,
+        fontWeight: FontWeight.w600,
+        height: 1.3,
+        color: Theme.of(context).colorScheme.onSurfaceVariant,
+      ),
+      h6Padding: const EdgeInsets.only(top: 12, bottom: 4),
+
+      // Other elements
+      code: baseStyleSheet.code?.copyWith(
+        fontSize: baseFontSize * 0.9,
+      ),
+      listBullet: baseStyleSheet.listBullet?.copyWith(fontSize: baseFontSize),
+      tableBody: baseStyleSheet.tableBody?.copyWith(fontSize: baseFontSize),
     );
 
     return MarkdownBody(

@@ -310,7 +310,7 @@ class _ViewScreenState extends State<ViewScreen> {
         // Note doesn't exist - create it with specified type
         final newNote = await widget.noteService.createNote(
           title: result,
-          text: '# $result\n\nStart writing here...',
+          text: '# $result\n\n',
           types: [noteType],
         );
 
