@@ -2,12 +2,13 @@ import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 
 class MarkdownLinkHelper {
-  /// Converts CamelCase words and URLs in markdown text to clickable links
+  /// Converts CamelCase words, URLs, and hashtags in markdown text to clickable links
   /// Preserves code blocks and existing markdown links
   /// Skips CamelCase words that match the current note title
   static String makeLinksClickable(String text, String currentNoteTitle) {
     final camelCasePattern = RegExp(r'\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b');
     final urlPattern = RegExp(r'(https?://[^\s\)<]+)');
+    final hashtagPattern = RegExp(r'(#\w+)');
     final codeBlockPattern = RegExp(r'```[\s\S]*?```');
     final inlineCodePattern = RegExp(r'`[^`]+`');
     final linkPattern = RegExp(r'\[([^\]]+)\]\(([^)]+)\)');
@@ -59,6 +60,16 @@ class MarkdownLinkHelper {
         replacements.add(MapEntry(
           match.start,
           MapEntry(url, '[$url]($url)'),
+        ));
+      }
+    }
+
+    for (final match in hashtagPattern.allMatches(text)) {
+      if (!shouldSkip(match.start, match.end)) {
+        final hashtag = match.group(1)!;
+        replacements.add(MapEntry(
+          match.start,
+          MapEntry(hashtag, '[$hashtag]($hashtag)'),
         ));
       }
     }

@@ -7,6 +7,7 @@ class NoteMarkdownViewer extends StatelessWidget {
   final String text;
   final String noteTitle;
   final Function(String noteTitle)? onNoteLinkTap;
+  final Function(String tag)? onTagTap;
   final bool selectable;
 
   const NoteMarkdownViewer({
@@ -14,6 +15,7 @@ class NoteMarkdownViewer extends StatelessWidget {
     required this.text,
     required this.noteTitle,
     this.onNoteLinkTap,
+    this.onTagTap,
     this.selectable = true,
   });
 
@@ -31,6 +33,12 @@ class NoteMarkdownViewer extends StatelessWidget {
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Could not open URL: $href')),
               );
+            }
+          } else if (href.startsWith('#')) {
+            // It's a hashtag link
+            final tag = href.substring(1); // Remove the # prefix
+            if (onTagTap != null) {
+              onTagTap!(tag);
             }
           } else {
             // It's a note link

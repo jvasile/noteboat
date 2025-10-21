@@ -343,6 +343,7 @@ class _ViewScreenState extends State<ViewScreen> {
                         text: _note!.text,
                         noteTitle: _note!.title,
                         onNoteLinkTap: _navigateToNote,
+                        onTagTap: _navigateToTagList,
                       ),
                     ],
                   ),

@@ -228,6 +228,12 @@ class _EditScreenState extends State<EditScreen> {
                 SnackBar(content: Text('Link to note: $noteTitle')),
               );
             },
+            onTagTap: (tag) {
+              // Tag links don't navigate in preview mode, just show a message
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(content: Text('Tag: #$tag')),
+              );
+            },
           ),
         ],
       ),
