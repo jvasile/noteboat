@@ -236,6 +236,32 @@ class _ViewScreenState extends State<ViewScreen> {
     }
   }
 
+  Future<void> _handleDeleteNote() async {
+    if (_note == null) return;
+
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => _DeleteConfirmationDialog(noteTitle: _note!.title),
+    );
+
+    if (confirmed == true && mounted) {
+      try {
+        await widget.noteService.deleteNoteById(_note!.id);
+
+        if (mounted) {
+          // Go back to previous view
+          Navigator.pop(context);
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error deleting note: $e')),
+          );
+        }
+      }
+    }
+  }
+
   void _handleAddNoteShortcut() async {
     await _handleAddNoteWithType('note');
   }
@@ -424,6 +450,11 @@ class _ViewScreenState extends State<ViewScreen> {
             _handleEditShortcut();
             return KeyEventResult.handled;
           }
+          // Handle Delete key for delete
+          if (event.logicalKey == LogicalKeyboardKey.delete) {
+            _handleDeleteNote();
+            return KeyEventResult.handled;
+          }
           // Handle '+' key for add note - show type selector
           if (event.character == '+' || event.logicalKey == LogicalKeyboardKey.add) {
             _showNoteTypeSelector();
@@ -472,6 +503,12 @@ class _ViewScreenState extends State<ViewScreen> {
                 icon: const Icon(Icons.edit),
                 tooltip: 'Edit',
                 onPressed: _handleEditShortcut,
+              ),
+            if (_note != null)
+              IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: 'Delete',
+                onPressed: _handleDeleteNote,
               ),
             IconButton(
               icon: const Icon(Icons.settings),
@@ -643,6 +680,78 @@ class _NoteTypeSelectorDialogState extends State<_NoteTypeSelectorDialog> {
           TextButton(
             onPressed: () => Navigator.pop(context),
             child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+/// Keyboard-navigable delete confirmation dialog
+class _DeleteConfirmationDialog extends StatefulWidget {
+  final String noteTitle;
+
+  const _DeleteConfirmationDialog({required this.noteTitle});
+
+  @override
+  State<_DeleteConfirmationDialog> createState() => _DeleteConfirmationDialogState();
+}
+
+class _DeleteConfirmationDialogState extends State<_DeleteConfirmationDialog> {
+  int _selectedIndex = 0; // 0 = Cancel, 1 = Delete
+
+  void _selectOption() {
+    Navigator.pop(context, _selectedIndex == 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+              event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            setState(() {
+              _selectedIndex = (_selectedIndex + 1) % 2;
+            });
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.enter) {
+            _selectOption();
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.pop(context, false);
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: AlertDialog(
+        title: const Text('Delete Note?'),
+        content: Text('Are you sure you want to delete "${widget.noteTitle}"? This action cannot be undone.'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            style: TextButton.styleFrom(
+              backgroundColor: _selectedIndex == 0
+                  ? Theme.of(context).colorScheme.primaryContainer
+                  : null,
+              foregroundColor: _selectedIndex == 0
+                  ? Theme.of(context).colorScheme.onPrimaryContainer
+                  : null,
+            ),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: _selectedIndex == 1
+                  ? Theme.of(context).colorScheme.error
+                  : Theme.of(context).colorScheme.error.withOpacity(0.5),
+            ),
+            child: const Text('Delete'),
           ),
         ],
       ),
