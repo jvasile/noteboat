@@ -17,6 +17,13 @@ class NoteService {
 
   NoteService(this.configService);
 
+  /// Sanitize a note title for use as a filename
+  /// Replaces forward slashes with dashes to prevent directory creation
+  /// The title in the note's frontmatter remains unchanged
+  String _sanitizeFilename(String title) {
+    return title.replaceAll('/', '-');
+  }
+
   // Initialize and load all notes
   Future<void> initialize() async {
     if (_initialized) return;
@@ -171,16 +178,18 @@ class NoteService {
         await FileService.deleteNoteFile(oldPath);
       }
 
-      // Create new file path
+      // Create new file path with sanitized filename
       final writeDir = await configService.getWriteDirectory();
-      filePath = path.join(writeDir, '${updatedNote.title}.md');
+      final safeFilename = _sanitizeFilename(updatedNote.title);
+      filePath = path.join(writeDir, '$safeFilename.md');
     } else if (_noteFilePaths.containsKey(id)) {
       // Update existing note
       filePath = _noteFilePaths[id]!;
     } else {
-      // New note
+      // New note with sanitized filename
       final writeDir = await configService.getWriteDirectory();
-      filePath = path.join(writeDir, '${updatedNote.title}.md');
+      final safeFilename = _sanitizeFilename(updatedNote.title);
+      filePath = path.join(writeDir, '$safeFilename.md');
     }
 
     // Write to file
