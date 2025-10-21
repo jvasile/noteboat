@@ -472,8 +472,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
                               if (note.tags.isNotEmpty)
                                 Wrap(
                                   spacing: 4,
+                                  runSpacing: 4,
                                   children: note.tags
-                                      .take(3)
                                       .map((tag) => ActionChip(
                                             label: Text(
                                               '#$tag',
