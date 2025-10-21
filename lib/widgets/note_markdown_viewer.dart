@@ -3,6 +3,7 @@ import 'package:flutter/gestures.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:markdown/markdown.dart' as md;
 import '../utils/markdown_link_helper.dart';
+import '../utils/text_helper.dart';
 
 /// A widget that renders markdown content with automatic CamelCase and URL linking
 class NoteMarkdownViewer extends StatelessWidget {
@@ -25,37 +26,9 @@ class NoteMarkdownViewer extends StatelessWidget {
     this.existingNoteTitles = const {},
   });
 
-  String _processText(String text, String noteTitle) {
-    // Check if first non-blank line is "# Title" matching the note title
-    final lines = text.split('\n');
-    int firstNonBlankIndex = -1;
-
-    for (int i = 0; i < lines.length; i++) {
-      if (lines[i].trim().isNotEmpty) {
-        firstNonBlankIndex = i;
-        break;
-      }
-    }
-
-    if (firstNonBlankIndex != -1) {
-      final firstLine = lines[firstNonBlankIndex].trim();
-      // Check if it's a heading that matches the title
-      if (firstLine.startsWith('# ')) {
-        final headingText = firstLine.substring(2).trim();
-        if (headingText == noteTitle) {
-          // Remove this line
-          lines.removeAt(firstNonBlankIndex);
-          text = lines.join('\n');
-        }
-      }
-    }
-
-    return text;
-  }
-
   @override
   Widget build(BuildContext context) {
-    final processedText = _processText(text, noteTitle);
+    final processedText = TextHelper.removeDuplicateHeading(text, noteTitle);
 
     // Start with theme-based stylesheet and customize with user font size
     final baseStyleSheet = MarkdownStyleSheet.fromTheme(Theme.of(context));

@@ -5,6 +5,7 @@ import '../services/note_service.dart';
 import '../services/config_service.dart';
 import '../types/types.dart';
 import '../utils/hotkey_helper.dart';
+import '../utils/text_helper.dart';
 import 'view_screen.dart';
 import 'settings_screen.dart';
 
@@ -305,12 +306,15 @@ class _ListViewScreenState extends State<ListViewScreen> {
                         'ID: ${note.id.substring(0, 8)}...',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
-                      Text(
-                        note.text.length > 50
-                            ? '${note.text.substring(0, 50)}...'
-                            : note.text,
-                        maxLines: 1,
-                      ),
+                      () {
+                        final processedText = TextHelper.removeDuplicateHeading(note.text, note.title);
+                        return Text(
+                          processedText.length > 50
+                              ? '${processedText.substring(0, 50)}...'
+                              : processedText,
+                          maxLines: 1,
+                        );
+                      }(),
                     ],
                   ),
                   onTap: () {
@@ -564,16 +568,19 @@ class _ListViewScreenState extends State<ListViewScreen> {
                           subtitle: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(
-                                note.text.length > 100
-                                    ? '${note.text.substring(0, 100)}...'
-                                    : note.text,
-                                maxLines: 2,
-                                overflow: TextOverflow.ellipsis,
-                                style: isSelected
-                                    ? TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer)
-                                    : null,
-                              ),
+                              () {
+                                final processedText = TextHelper.removeDuplicateHeading(note.text, note.title);
+                                return Text(
+                                  processedText.length > 100
+                                      ? '${processedText.substring(0, 100)}...'
+                                      : processedText,
+                                  maxLines: 2,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: isSelected
+                                      ? TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer)
+                                      : null,
+                                );
+                              }(),
                               const SizedBox(height: 4),
                               if (note.tags.isNotEmpty)
                                 Wrap(
