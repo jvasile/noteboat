@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
 import 'view_screen.dart';
+import 'settings_screen.dart';
 
 class ListViewScreen extends StatefulWidget {
   final NoteService noteService;
@@ -65,6 +66,22 @@ class _ListViewScreenState extends State<ListViewScreen> {
       appBar: AppBar(
         title: const Text('All Notes'),
         backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.settings),
+            tooltip: 'Settings',
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SettingsScreen(
+                    configService: widget.noteService.configService,
+                  ),
+                ),
+              );
+            },
+          ),
+        ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(

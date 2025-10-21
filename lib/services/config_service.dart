@@ -86,10 +86,14 @@ class ConfigService {
     final configPath = await _getConfigPath();
     final configFile = File(configPath);
 
+    final authorValue = config.defaultAuthor.isEmpty
+        ? '""'
+        : config.defaultAuthor;
+
     final yamlContent = '''# Noteboat Configuration
 directories:
 ${config.directories.map((d) => '  - $d').join('\n')}
-defaultAuthor: ${config.defaultAuthor}
+defaultAuthor: $authorValue
 ''';
 
     await configFile.writeAsString(yamlContent);

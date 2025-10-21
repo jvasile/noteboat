@@ -81,6 +81,9 @@ class FileService {
           for (final subEntry in (value as Map).entries) {
             yamlLines.add('  ${subEntry.key}: ${subEntry.value}');
           }
+        } else if (value is String && value.isEmpty) {
+          // Handle empty strings properly
+          yamlLines.add('$key: ""');
         } else {
           yamlLines.add('$key: $value');
         }

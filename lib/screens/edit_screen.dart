@@ -20,7 +20,6 @@ class EditScreen extends StatefulWidget {
 class _EditScreenState extends State<EditScreen> {
   late TextEditingController _titleController;
   late TextEditingController _textController;
-  late TextEditingController _authorController;
   bool _isPreview = false;
   bool _isSaving = false;
   String _originalTitle = '';
@@ -31,21 +30,18 @@ class _EditScreenState extends State<EditScreen> {
     _originalTitle = widget.note.title;
     _titleController = TextEditingController(text: widget.note.title);
     _textController = TextEditingController(text: widget.note.text);
-    _authorController = TextEditingController(text: widget.note.author);
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _textController.dispose();
-    _authorController.dispose();
     super.dispose();
   }
 
   Future<void> _saveNote() async {
     final title = _titleController.text.trim();
     final text = _textController.text.trim();
-    final author = _authorController.text.trim();
 
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -70,7 +66,6 @@ class _EditScreenState extends State<EditScreen> {
       final updatedNote = widget.note.copyWith(
         title: title,
         text: text,
-        author: author,
       );
 
       await widget.noteService.saveNote(
@@ -158,16 +153,6 @@ class _EditScreenState extends State<EditScreen> {
           ),
           const SizedBox(height: 16),
 
-          // Author field
-          TextField(
-            controller: _authorController,
-            decoration: const InputDecoration(
-              labelText: 'Author (optional)',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          const SizedBox(height: 16),
-
           // Help text
           Card(
             color: Colors.blue.shade50,
@@ -225,15 +210,6 @@ class _EditScreenState extends State<EditScreen> {
                 ),
           ),
           const SizedBox(height: 8),
-
-          // Author
-          if (_authorController.text.trim().isNotEmpty) ...[
-            Text(
-              'Author: ${_authorController.text.trim()}',
-              style: Theme.of(context).textTheme.bodySmall,
-            ),
-            const SizedBox(height: 16),
-          ],
 
           const Divider(),
           const SizedBox(height: 16),

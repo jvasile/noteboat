@@ -110,9 +110,18 @@ class NoteService {
     final links = LinkExtractor.extractAllLinks(note.text, note.extraFields);
     final tags = TagExtractor.extractAllTags(note.text, note.extraFields);
 
+    // Add current user to authors list if not already present
+    final config = await configService.loadConfig();
+    final currentAuthor = config.defaultAuthor;
+    final updatedAuthors = List<String>.from(note.authors);
+    if (currentAuthor.isNotEmpty && !updatedAuthors.contains(currentAuthor)) {
+      updatedAuthors.add(currentAuthor);
+    }
+
     final updatedNote = note.copyWith(
       links: links,
       tags: tags,
+      authors: updatedAuthors,
       mtime: DateTime.now(),
     );
 
@@ -154,19 +163,21 @@ class NoteService {
   Future<Note> createNote({
     required String title,
     String text = '',
-    String? author,
     List<String>? types,
     Map<String, dynamic>? extraFields,
   }) async {
     final config = await configService.loadConfig();
-    final noteAuthor = author ?? config.defaultAuthor;
+    final defaultAuthor = config.defaultAuthor;
+
+    // Start with default author in the list if provided
+    final authors = defaultAuthor.isNotEmpty ? [defaultAuthor] : <String>[];
 
     final note = Note(
       id: const Uuid().v4(),
       title: title,
       text: text,
       mtime: DateTime.now(),
-      author: noteAuthor,
+      authors: authors,
       types: types,
       extraFields: extraFields,
     );
