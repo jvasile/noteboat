@@ -1,47 +1,129 @@
-# Note Boat
+# Noteboat
 
-Note boat is a collection of linked notes and other data objects.  It is an app
-that allows creation, editing, browsing, and searching of notes.
+Noteboat is a linked note-taking application built with Flutter. It allows
+creation, editing, browsing, and searching of notes with automatic link
+detection and rendering.
 
-Object types fit into a hierarchical type tree.  That is, there is a base data
-object called a note that contains some basic data: title, text, tags, mtime,
-links. Titles should be one word, camelcased.  They match without regard to
-case.  Each note must have a unique title.  All the other data types inherit
-from this base note.
+## Features
 
-Another type of data is the graphic.  This type adds a filename to the data
-struct.  That filename is the location of the graphic file.
-
-Another type of data might be a receipt.  This is just a picture of a receipt.
-There might be some additional data fields for amount, client, purpose, etc.
+- **Automatic Link Detection**: CamelCase words, markdown links, and hashtags are automatically made clickable
+- **Multiple Link Formats**: Support for simple titles, titles with spaces, and query string disambiguation
+- **Full-Text Search**: Search across all note fields with case-insensitive matching
+- **Dark Mode**: Light, dark, and system theme modes with persistence
+- **Keyboard Shortcuts**: Efficient keyboard navigation (see below)
+- **Note Disambiguation**: Handle multiple notes with the same title gracefully
+- **CLI Mode**: Command-line interface for listing and searching notes
+- **Markdown Support**: Full markdown rendering with preview mode
 
 ## Architecture
 
-Noteboat's backend is just a bunch of files.  Notes are just text files in some
-sensible format that allows for data fields and a text block.  Markdown works
-well.  Noteboat supports yaml and json.   The text field supports markdown.
+### Data Storage
 
-Noteboat's front end might turn the structured data document into html or some
-other representation.  But the backend documents are the canonical information.
+Notes are stored as `.md` files with YAML frontmatter containing metadata:
+- `title`: Note title (can be CamelCase or contain spaces)
+- `mtime`: Modification time
+- `editors`: List of editor names
+- `@id`: Unique GUID for the note
+- `@type`: Hierarchical type information
+- `_links`: Cached list of links (auto-generated, excludes self-references)
+- `_tags`: Cached list of tags (auto-generated)
 
-Noteboat files might be in a variety of directories.  Noteboat might search many
-directories for notes, but that isn't semantically relevant to resolving links
-or tags or anything like that.  Directories aren't namespaces.  Filenames are
-always resolved relative to the directory of the note containing the filename.
-Links are just titles of other notes.
+The markdown body contains the note text. The system can also read/write JSON or
+other formats if found.
 
-## Interface
+Noteboat searches multiple directories for notes. The directory hierarchy is not
+semantically significant - notes are identified by title and @id. Storage
+operations use the first configured directory for writes.
 
-In addition to the various GUI entrypoints in different operating systems, there
-is a CLI that can be used to query the notes in Noteboat.
+### Note Types
 
-When viewing a note, users can click on tags and links to access other notes.
+Object types fit into a hierarchical type tree. The base type is `note` which
+contains title, text, tags, mtime, and links. Additional types can inherit from
+the base note and add extra fields.
 
-## Config
+### Dual Caching System
 
-Noteboat stores its config in a yaml file in standard places used for storage of
-user application config on each OS.
+The NoteService maintains efficient caches:
+- By title (supports multiple notes with same title)
+- By ID (unique lookup)
+- ID to file path mapping
 
-# Design
+### Link Detection
 
-Noteboat uses material design.
+Links and tags are automatically detected and made clickable:
+- **CamelCase**: `MyOtherNote` becomes a clickable link
+- **Markdown**: `[My Note](My Note)` for titles with spaces
+- **Disambiguation**: `[My Note](My Note?id=xxx)` to specify exact note
+- **Hashtags**: `#tagname` links to search results
+- **URLs**: `http://` and `https://` links open in browser
+
+## User Interface
+
+### Screens
+
+1. **List View**: Shows all notes with search functionality
+2. **View Mode**: Displays note with rendered markdown, clickable links/tags
+3. **Edit Mode**: Form for editing title and text with live preview
+4. **Settings**: Configure default editor name and theme
+
+### Navigation
+
+- Clicking a note in the list opens it in View mode
+- Clicking a link navigates to that note
+- Clicking a tag navigates to search results
+- Default note is "Main" (created if missing)
+
+### Keyboard Shortcuts
+
+**View Screen:**
+- `e` - Edit current note
+- `+` - Add note (or edit if exists)
+
+**List/Search Screen:**
+- `+` - Add note (or edit if exists)
+
+**Edit Screen:**
+- `Ctrl/Cmd + P` - Toggle preview
+- `Ctrl/Cmd + S` - Save and exit
+- `Escape` - Exit (confirms if unsaved changes)
+
+**Settings Screen:**
+- `Ctrl/Cmd + S` - Save settings
+- `Escape` - Exit (confirms if unsaved changes)
+
+## Command-Line Interface
+
+Noteboat includes a CLI for querying notes:
+
+```bash
+# List all notes
+noteboat list
+
+# Search for notes
+noteboat search <query terms...>
+
+# Show help
+noteboat help
+
+# Launch GUI (default)
+noteboat
+```
+
+## Configuration
+
+Config is stored in `noteboat_config.yaml` in the application documents
+directory. Settings include:
+
+- `directories`: List of note directories to search/write
+- `defaultEditor`: Default editor name for new notes
+- `themeMode`: Theme preference (light/dark/system)
+
+## Design
+
+Noteboat uses Material Design 3 with theme-aware colors for optimal readability
+in both light and dark modes.
+
+## Development
+
+Built with Flutter/Dart. See `CLAUDE.md` for detailed architecture documentation
+and development guidelines.

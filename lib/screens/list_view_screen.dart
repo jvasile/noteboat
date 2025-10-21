@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
 import 'view_screen.dart';
+import 'edit_screen.dart';
 import 'settings_screen.dart';
 
 class ListViewScreen extends StatefulWidget {
@@ -82,26 +83,114 @@ class _ListViewScreenState extends State<ListViewScreen> {
   void _handleAddNoteShortcut() async {
     final result = await _showCreateNoteDialog();
     if (result != null && result.isNotEmpty) {
-      final newNote = await widget.noteService.createNote(
-        title: result,
-        text: '# $result\n\nStart writing here...',
-      );
-      _loadNotes();
+      // Check if note(s) with this title already exist
+      final existingNotes = await widget.noteService.getNotesByTitle(result);
 
-      if (mounted) {
-        Navigator.push(
-          context,
-          MaterialPageRoute(
-            builder: (context) => ViewScreen(
-              noteService: widget.noteService,
-              noteId: newNote.id,
-              onThemeChanged: widget.onThemeChanged,
-              currentThemeMode: widget.currentThemeMode,
-            ),
-          ),
+      if (existingNotes.isNotEmpty) {
+        // Note(s) with this title already exist
+        if (mounted) {
+          if (existingNotes.length == 1) {
+            // Only one note - navigate to edit it
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) => EditScreen(
+                  noteService: widget.noteService,
+                  note: existingNotes.first,
+                ),
+              ),
+            ).then((result) {
+              if (result == true) {
+                _loadNotes();
+              }
+            });
+          } else {
+            // Multiple notes with same title - show disambiguation for editing
+            _showDisambiguationForEdit(result, existingNotes);
+          }
+        }
+      } else {
+        // Note doesn't exist - create it
+        final newNote = await widget.noteService.createNote(
+          title: result,
+          text: '# $result\n\nStart writing here...',
         );
+        _loadNotes();
+
+        if (mounted) {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => ViewScreen(
+                noteService: widget.noteService,
+                noteId: newNote.id,
+                onThemeChanged: widget.onThemeChanged,
+                currentThemeMode: widget.currentThemeMode,
+              ),
+            ),
+          );
+        }
       }
     }
+  }
+
+  void _showDisambiguationForEdit(String title, List<Note> notes) {
+    showModalBottomSheet(
+      context: context,
+      builder: (context) => Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              'Multiple notes titled "$title"',
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+          ),
+          Expanded(
+            child: ListView.builder(
+              itemCount: notes.length,
+              itemBuilder: (context, index) {
+                final note = notes[index];
+                return ListTile(
+                  title: Text(note.title),
+                  subtitle: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'ID: ${note.id.substring(0, 8)}...',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      Text(
+                        note.text.length > 50
+                            ? '${note.text.substring(0, 50)}...'
+                            : note.text,
+                        maxLines: 1,
+                      ),
+                    ],
+                  ),
+                  onTap: () {
+                    Navigator.pop(context);
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => EditScreen(
+                          noteService: widget.noteService,
+                          note: note,
+                        ),
+                      ),
+                    ).then((result) {
+                      if (result == true) {
+                        _loadNotes();
+                      }
+                    });
+                  },
+                );
+              },
+            ),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
