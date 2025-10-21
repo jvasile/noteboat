@@ -269,31 +269,6 @@ class _ViewScreenState extends State<ViewScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Title
-                      Text(
-                        _note!.title,
-                        style: Theme.of(context).textTheme.headlineMedium?.copyWith(
-                              fontWeight: FontWeight.bold,
-                            ),
-                      ),
-                      const SizedBox(height: 8),
-
-                      // Metadata
-                      Text(
-                        'Modified: ${_formatDateTime(_note!.mtime)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      if (_note!.editors.isNotEmpty) ...[
-                        Text(
-                          'Editors: ${_note!.editors.join(', ')}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ],
-                      const SizedBox(height: 16),
-
-                      const Divider(),
-                      const SizedBox(height: 16),
-
                       // Markdown content
                       NoteMarkdownViewer(
                         text: _note!.text,
@@ -301,6 +276,28 @@ class _ViewScreenState extends State<ViewScreen> {
                         onNoteLinkTap: _navigateToNote,
                         onTagTap: _navigateToTagList,
                       ),
+
+                      const SizedBox(height: 24),
+                      const Divider(),
+                      const SizedBox(height: 16),
+
+                      // Footer metadata
+                      Text(
+                        'Modified: ${_formatDateTime(_note!.mtime)}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        'ID: ${_note!.id}',
+                        style: Theme.of(context).textTheme.bodySmall,
+                      ),
+                      if (_note!.editors.isNotEmpty) ...[
+                        const SizedBox(height: 4),
+                        Text(
+                          'Editors: ${_note!.editors.join(', ')}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ],
                     ],
                   ),
                 ),
