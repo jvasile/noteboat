@@ -7,11 +7,13 @@ class AppConfig {
   final List<String> directories;
   final String defaultEditor;
   final String themeMode; // 'light', 'dark', or 'system'
+  final double baseFontSize; // Base font size for markdown content
 
   AppConfig({
     required this.directories,
     this.defaultEditor = '',
     this.themeMode = 'system',
+    this.baseFontSize = 16.0,
   });
 
   factory AppConfig.fromMap(Map<String, dynamic> map) {
@@ -23,6 +25,15 @@ class AppConfig {
       editor = map['defaultAuthor']?.toString() ?? '';
     }
 
+    // Parse font size, default to 16.0
+    double fontSize = 16.0;
+    if (map['baseFontSize'] != null) {
+      final fontSizeValue = map['baseFontSize'];
+      if (fontSizeValue is num) {
+        fontSize = fontSizeValue.toDouble();
+      }
+    }
+
     return AppConfig(
       directories: (map['directories'] as List?)
               ?.map((e) => e.toString())
@@ -30,6 +41,7 @@ class AppConfig {
           [],
       defaultEditor: editor,
       themeMode: map['themeMode']?.toString() ?? 'system',
+      baseFontSize: fontSize,
     );
   }
 
@@ -38,6 +50,7 @@ class AppConfig {
       'directories': directories,
       'defaultEditor': defaultEditor,
       'themeMode': themeMode,
+      'baseFontSize': baseFontSize,
     };
   }
 }
@@ -86,6 +99,7 @@ class ConfigService {
         directories: [defaultNotesDir],
         defaultEditor: '',
         themeMode: 'system',
+        baseFontSize: 16.0,
       );
 
       await saveConfig(_config!);
@@ -108,6 +122,7 @@ directories:
 ${config.directories.map((d) => '  - $d').join('\n')}
 defaultEditor: $editorValue
 themeMode: ${config.themeMode}
+baseFontSize: ${config.baseFontSize}
 ''';
 
     await configFile.writeAsString(yamlContent);

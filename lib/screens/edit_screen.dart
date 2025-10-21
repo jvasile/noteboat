@@ -21,6 +21,7 @@ class EditScreen extends StatefulWidget {
 class _EditScreenState extends State<EditScreen> {
   late TextEditingController _titleController;
   late TextEditingController _textController;
+  final FocusNode _textFocusNode = FocusNode();
   bool _isPreview = false;
   bool _isSaving = false;
   String _originalTitle = '';
@@ -31,12 +32,18 @@ class _EditScreenState extends State<EditScreen> {
     _originalTitle = widget.note.title;
     _titleController = TextEditingController(text: widget.note.title);
     _textController = TextEditingController(text: widget.note.text);
+    // Request focus on text field after first frame and position cursor at beginning
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _textFocusNode.requestFocus();
+      _textController.selection = const TextSelection.collapsed(offset: 0);
+    });
   }
 
   @override
   void dispose() {
     _titleController.dispose();
     _textController.dispose();
+    _textFocusNode.dispose();
     super.dispose();
   }
 
@@ -261,6 +268,7 @@ class _EditScreenState extends State<EditScreen> {
           // Text field
           TextField(
             controller: _textController,
+            focusNode: _textFocusNode,
             decoration: const InputDecoration(
               labelText: 'Content (Markdown)',
               hintText: 'Start writing...',

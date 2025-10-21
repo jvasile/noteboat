@@ -31,11 +31,22 @@ class _ViewScreenState extends State<ViewScreen> {
   Note? _note;
   bool _isLoading = true;
   String? _error;
+  double _baseFontSize = 16.0;
 
   @override
   void initState() {
     super.initState();
     _loadNote();
+    _loadFontSize();
+  }
+
+  Future<void> _loadFontSize() async {
+    final config = await widget.noteService.configService.loadConfig();
+    if (mounted) {
+      setState(() {
+        _baseFontSize = config.baseFontSize;
+      });
+    }
   }
 
   Future<void> _loadNote() async {
@@ -307,14 +318,20 @@ class _ViewScreenState extends State<ViewScreen> {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ViewScreen(
-                noteService: widget.noteService,
-                noteId: newNote.id,
-                onThemeChanged: widget.onThemeChanged,
-                currentThemeMode: widget.currentThemeMode,
-              ),
+              builder: (context) => NoteTypeRegistry.instance
+                  .getHandler(newNote.types)
+                  .buildEditor(
+                    context: context,
+                    note: newNote,
+                    noteService: widget.noteService,
+                    onComplete: (saved) => Navigator.pop(context, saved),
+                  ),
             ),
-          );
+          ).then((result) {
+            if (result == true) {
+              _loadNote();
+            }
+          });
         }
       }
     }
@@ -564,6 +581,7 @@ class _ViewScreenState extends State<ViewScreen> {
                               onNoteLinkTap: _navigateToNote,
                               onTagTap: _navigateToTagList,
                               onRefresh: _loadNote,
+                              baseFontSize: _baseFontSize,
                             ),
 
                         const SizedBox(height: 24),

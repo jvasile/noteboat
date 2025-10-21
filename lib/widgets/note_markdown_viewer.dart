@@ -9,6 +9,7 @@ class NoteMarkdownViewer extends StatelessWidget {
   final Function(String noteTitle)? onNoteLinkTap;
   final Function(String tag)? onTagTap;
   final bool selectable;
+  final double baseFontSize;
 
   const NoteMarkdownViewer({
     super.key,
@@ -17,6 +18,7 @@ class NoteMarkdownViewer extends StatelessWidget {
     this.onNoteLinkTap,
     this.onTagTap,
     this.selectable = true,
+    this.baseFontSize = 16.0,
   });
 
   String _processText(String text, String noteTitle) {
@@ -51,9 +53,24 @@ class NoteMarkdownViewer extends StatelessWidget {
   Widget build(BuildContext context) {
     final processedText = _processText(text, noteTitle);
 
+    // Create custom style sheet with user-specified base font size
+    final styleSheet = MarkdownStyleSheet(
+      p: TextStyle(fontSize: baseFontSize),
+      h1: TextStyle(fontSize: baseFontSize * 2.0, fontWeight: FontWeight.bold),
+      h2: TextStyle(fontSize: baseFontSize * 1.5, fontWeight: FontWeight.bold),
+      h3: TextStyle(fontSize: baseFontSize * 1.25, fontWeight: FontWeight.bold),
+      h4: TextStyle(fontSize: baseFontSize * 1.1, fontWeight: FontWeight.bold),
+      h5: TextStyle(fontSize: baseFontSize, fontWeight: FontWeight.bold),
+      h6: TextStyle(fontSize: baseFontSize * 0.9, fontWeight: FontWeight.bold),
+      code: TextStyle(fontSize: baseFontSize * 0.9, fontFamily: 'monospace'),
+      listBullet: TextStyle(fontSize: baseFontSize),
+      tableBody: TextStyle(fontSize: baseFontSize),
+    );
+
     return MarkdownBody(
       data: MarkdownLinkHelper.makeLinksClickable(processedText, noteTitle),
       selectable: selectable,
+      styleSheet: styleSheet,
       onTapLink: (linkText, href, linkTitle) async {
         if (href != null) {
           // Check if it's a web URL

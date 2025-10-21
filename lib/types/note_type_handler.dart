@@ -16,6 +16,7 @@ abstract class NoteTypeHandler {
     required Function(String) onNoteLinkTap,
     required Function(String) onTagTap,
     required VoidCallback onRefresh,
+    double baseFontSize = 16.0,
   });
 
   /// Build the editor widget for this note type
@@ -104,12 +105,14 @@ class BaseNoteHandler extends NoteTypeHandler {
     required Function(String) onNoteLinkTap,
     required Function(String) onTagTap,
     required VoidCallback onRefresh,
+    double baseFontSize = 16.0,
   }) {
     return NoteMarkdownViewer(
       text: note.text,
       noteTitle: note.title,
       onNoteLinkTap: onNoteLinkTap,
       onTagTap: onTagTap,
+      baseFontSize: baseFontSize,
     );
   }
 

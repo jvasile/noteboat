@@ -156,20 +156,25 @@ class _ListViewScreenState extends State<ListViewScreen> {
           text: '# $result\n\nStart writing here...',
           types: [noteType],
         );
-        _loadNotes();
 
         if (mounted) {
           Navigator.push(
             context,
             MaterialPageRoute(
-              builder: (context) => ViewScreen(
-                noteService: widget.noteService,
-                noteId: newNote.id,
-                onThemeChanged: widget.onThemeChanged,
-                currentThemeMode: widget.currentThemeMode,
-              ),
+              builder: (context) => NoteTypeRegistry.instance
+                  .getHandler(newNote.types)
+                  .buildEditor(
+                    context: context,
+                    note: newNote,
+                    noteService: widget.noteService,
+                    onComplete: (saved) => Navigator.pop(context, saved),
+                  ),
             ),
-          );
+          ).then((result) {
+            if (result == true) {
+              _loadNotes();
+            }
+          });
         }
       }
     }

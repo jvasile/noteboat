@@ -24,6 +24,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isLoading = true;
   bool _isSaving = false;
   late ThemeMode _selectedThemeMode;
+  double _baseFontSize = 16.0;
 
   @override
   void initState() {
@@ -47,6 +48,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     setState(() {
       _config = config;
       _editorController.text = config.defaultEditor;
+      _baseFontSize = config.baseFontSize;
       _isLoading = false;
     });
   }
@@ -61,7 +63,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final originalTheme = widget.currentThemeMode ?? ThemeMode.system;
     final themeChanged = _selectedThemeMode != originalTheme;
 
-    return editorChanged || themeChanged;
+    // Check if font size changed
+    final fontSizeChanged = _baseFontSize != _config!.baseFontSize;
+
+    return editorChanged || themeChanged || fontSizeChanged;
   }
 
   Future<bool> _confirmDiscard() async {
@@ -95,6 +100,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         directories: _config!.directories,
         defaultEditor: _editorController.text.trim(),
         themeMode: _config!.themeMode,
+        baseFontSize: _baseFontSize,
       );
 
       await widget.configService.saveConfig(updatedConfig);
@@ -238,6 +244,65 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         widget.onThemeChanged!(newSelection.first);
                       },
                     ),
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 16),
+
+                  // Font size settings
+                  Text(
+                    'Display',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Adjust the base font size for note content',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  Row(
+                    children: [
+                      Text(
+                        'Font Size:',
+                        style: Theme.of(context).textTheme.bodyLarge,
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Slider(
+                          value: _baseFontSize,
+                          min: 12.0,
+                          max: 24.0,
+                          divisions: 12,
+                          label: _baseFontSize.toStringAsFixed(0),
+                          onChanged: (value) {
+                            setState(() {
+                              _baseFontSize = value;
+                            });
+                          },
+                        ),
+                      ),
+                      SizedBox(
+                        width: 40,
+                        child: Text(
+                          '${_baseFontSize.toStringAsFixed(0)}',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 8),
+                  Card(
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
+                      child: Text(
+                        'Sample text at current size',
+                        style: TextStyle(
+                          fontSize: _baseFontSize,
+                          color: Theme.of(context).colorScheme.onSurface,
+                        ),
+                      ),
+                    ),
+                  ),
                   const SizedBox(height: 32),
                   const Divider(),
                   const SizedBox(height: 16),
