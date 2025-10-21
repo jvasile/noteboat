@@ -78,9 +78,17 @@ Links and tags are automatically detected and made clickable:
 **View Screen:**
 - `e` - Edit current note
 - `+` - Add note (or edit if exists)
+- `Escape` or `Alt + Left Arrow` - Go back to previous screen
+- `Delete` - Delete current note
+- `/` - Switch to All Notes (search) screen
+- `Left/Right Arrow` - Navigate linked list notes (if applicable)
 
 **List/Search Screen:**
 - `+` - Add note (or edit if exists)
+- `/` - Focus search bar
+- `Tab` - Navigate search results
+- `j/k` or `Arrow Keys` - Navigate results
+- `Enter` - Open selected result
 
 **Edit Screen:**
 - `Ctrl/Cmd + P` - Toggle preview

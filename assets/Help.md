@@ -47,6 +47,7 @@ The app starts in the All Notes (search) view. Press `/` to focus the search bar
 ### Viewing Notes
  * `e` - Edit current note
  * `Delete` - Delete current note (with confirmation)
+ * `Escape` or `Alt+Left` - Go back to previous screen
 
 ### Editing Notes
  * `Ctrl+P` - Toggle preview
