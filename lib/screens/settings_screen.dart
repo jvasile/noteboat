@@ -3,8 +3,15 @@ import '../services/config_service.dart';
 
 class SettingsScreen extends StatefulWidget {
   final ConfigService configService;
+  final Function(ThemeMode)? onThemeChanged;
+  final ThemeMode? currentThemeMode;
 
-  const SettingsScreen({super.key, required this.configService});
+  const SettingsScreen({
+    super.key,
+    required this.configService,
+    this.onThemeChanged,
+    this.currentThemeMode,
+  });
 
   @override
   State<SettingsScreen> createState() => _SettingsScreenState();
@@ -15,11 +22,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
   AppConfig? _config;
   bool _isLoading = true;
   bool _isSaving = false;
+  late ThemeMode _selectedThemeMode;
 
   @override
   void initState() {
     super.initState();
     _editorController = TextEditingController();
+    _selectedThemeMode = widget.currentThemeMode ?? ThemeMode.system;
     _loadConfig();
   }
 
@@ -50,6 +59,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       final updatedConfig = AppConfig(
         directories: _config!.directories,
         defaultEditor: _editorController.text.trim(),
+        themeMode: _config!.themeMode,
       );
 
       await widget.configService.saveConfig(updatedConfig);
@@ -128,6 +138,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const SizedBox(height: 32),
                   const Divider(),
                   const SizedBox(height: 16),
+
+                  // Theme settings
+                  Text(
+                    'Appearance',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Choose your preferred theme',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  if (widget.onThemeChanged != null)
+                    SegmentedButton<ThemeMode>(
+                      segments: const [
+                        ButtonSegment<ThemeMode>(
+                          value: ThemeMode.light,
+                          label: Text('Light'),
+                          icon: Icon(Icons.light_mode),
+                        ),
+                        ButtonSegment<ThemeMode>(
+                          value: ThemeMode.dark,
+                          label: Text('Dark'),
+                          icon: Icon(Icons.dark_mode),
+                        ),
+                        ButtonSegment<ThemeMode>(
+                          value: ThemeMode.system,
+                          label: Text('System'),
+                          icon: Icon(Icons.brightness_auto),
+                        ),
+                      ],
+                      selected: {_selectedThemeMode},
+                      onSelectionChanged: (Set<ThemeMode> newSelection) {
+                        setState(() {
+                          _selectedThemeMode = newSelection.first;
+                        });
+                        widget.onThemeChanged!(newSelection.first);
+                      },
+                    ),
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 16),
+
                   Text(
                     'Storage',
                     style: Theme.of(context).textTheme.titleLarge,
@@ -150,26 +203,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ))),
                   const SizedBox(height: 16),
                   Card(
-                    color: Colors.blue.shade50,
-                    child: const Padding(
-                      padding: EdgeInsets.all(12.0),
+                    color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                    child: Padding(
+                      padding: const EdgeInsets.all(12.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(Icons.info_outline, size: 20),
-                              SizedBox(width: 8),
+                              Icon(
+                                Icons.info_outline,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                              const SizedBox(width: 8),
                               Text(
                                 'About Noteboat',
-                                style: TextStyle(fontWeight: FontWeight.bold),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                  color: Theme.of(context).colorScheme.onSurface,
+                                ),
                               ),
                             ],
                           ),
-                          SizedBox(height: 8),
-                          Text('Version: 1.0.0'),
-                          Text('Notes are stored as markdown files with YAML frontmatter'),
-                          Text('You can edit them directly or sync with git'),
+                          const SizedBox(height: 8),
+                          Text(
+                            'Version: 1.0.0',
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                          ),
+                          Text(
+                            'Notes are stored as markdown files with YAML frontmatter',
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                          ),
+                          Text(
+                            'You can edit them directly or sync with git',
+                            style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                          ),
                         ],
                       ),
                     ),

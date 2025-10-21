@@ -155,23 +155,44 @@ class _EditScreenState extends State<EditScreen> {
 
           // Help text
           Card(
-            color: Colors.blue.shade50,
-            child: const Padding(
-              padding: EdgeInsets.all(12.0),
+            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+            child: Padding(
+              padding: const EdgeInsets.all(12.0),
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
                     'Markdown Tips:',
-                    style: TextStyle(fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSurface,
+                    ),
                   ),
-                  SizedBox(height: 4),
-                  Text('• CamelCase words auto-link: MyOtherNote'),
-                  Text('• Link titles with spaces: [My Note](My Note)'),
-                  Text('• Disambiguate: [My Note](My Note?id=xxx)'),
-                  Text('• Add tags with #hashtag'),
-                  Text('• Use # for headings, ** for bold, * for italic'),
-                  Text('• Use - or * for bullet lists'),
+                  const SizedBox(height: 4),
+                  Text(
+                    '• CamelCase words auto-link: MyOtherNote',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  ),
+                  Text(
+                    '• Link titles with spaces: [My Note](My Note)',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  ),
+                  Text(
+                    '• Disambiguate: [My Note](My Note?id=xxx)',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  ),
+                  Text(
+                    '• Add tags with #hashtag',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  ),
+                  Text(
+                    '• Use # for headings, ** for bold, * for italic',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  ),
+                  Text(
+                    '• Use - or * for bullet lists',
+                    style: TextStyle(color: Theme.of(context).colorScheme.onSurface),
+                  ),
                 ],
               ),
             ),

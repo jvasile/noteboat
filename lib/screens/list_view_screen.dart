@@ -7,11 +7,15 @@ import 'settings_screen.dart';
 class ListViewScreen extends StatefulWidget {
   final NoteService noteService;
   final String? initialSearchQuery;
+  final Function(ThemeMode)? onThemeChanged;
+  final ThemeMode? currentThemeMode;
 
   const ListViewScreen({
     super.key,
     required this.noteService,
     this.initialSearchQuery,
+    this.onThemeChanged,
+    this.currentThemeMode,
   });
 
   @override
@@ -90,6 +94,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
                 MaterialPageRoute(
                   builder: (context) => SettingsScreen(
                     configService: widget.noteService.configService,
+                    onThemeChanged: widget.onThemeChanged,
+                    currentThemeMode: widget.currentThemeMode,
                   ),
                 ),
               );
@@ -192,6 +198,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
                                 builder: (context) => ViewScreen(
                                   noteService: widget.noteService,
                                   noteId: note.id,
+                                  onThemeChanged: widget.onThemeChanged,
+                                  currentThemeMode: widget.currentThemeMode,
                                 ),
                               ),
                             );
@@ -220,6 +228,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
                   builder: (context) => ViewScreen(
                     noteService: widget.noteService,
                     noteId: newNote.id,
+                    onThemeChanged: widget.onThemeChanged,
+                    currentThemeMode: widget.currentThemeMode,
                   ),
                 ),
               );

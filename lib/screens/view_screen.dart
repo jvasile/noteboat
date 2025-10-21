@@ -9,12 +9,16 @@ class ViewScreen extends StatefulWidget {
   final NoteService noteService;
   final String? noteTitle;
   final String? noteId;
+  final Function(ThemeMode)? onThemeChanged;
+  final ThemeMode? currentThemeMode;
 
   const ViewScreen({
     super.key,
     required this.noteService,
     this.noteTitle,
     this.noteId,
+    this.onThemeChanged,
+    this.currentThemeMode,
   }) : assert(noteTitle != null || noteId != null, 'Either noteTitle or noteId must be provided');
 
   @override
@@ -96,6 +100,8 @@ class _ViewScreenState extends State<ViewScreen> {
             builder: (context) => ViewScreen(
               noteService: widget.noteService,
               noteId: note.id,
+              onThemeChanged: widget.onThemeChanged,
+              currentThemeMode: widget.currentThemeMode,
             ),
           ),
         );
@@ -124,6 +130,8 @@ class _ViewScreenState extends State<ViewScreen> {
           builder: (context) => ViewScreen(
             noteService: widget.noteService,
             noteId: notes.first.id,
+            onThemeChanged: widget.onThemeChanged,
+            currentThemeMode: widget.currentThemeMode,
           ),
         ),
       );
@@ -175,6 +183,8 @@ class _ViewScreenState extends State<ViewScreen> {
                         builder: (context) => ViewScreen(
                           noteService: widget.noteService,
                           noteId: note.id,
+                          onThemeChanged: widget.onThemeChanged,
+                          currentThemeMode: widget.currentThemeMode,
                         ),
                       ),
                     );
@@ -195,6 +205,8 @@ class _ViewScreenState extends State<ViewScreen> {
         builder: (context) => ListViewScreen(
           noteService: widget.noteService,
           initialSearchQuery: '#$tag',
+          onThemeChanged: widget.onThemeChanged,
+          currentThemeMode: widget.currentThemeMode,
         ),
       ),
     );
@@ -216,6 +228,8 @@ class _ViewScreenState extends State<ViewScreen> {
                 MaterialPageRoute(
                   builder: (context) => ListViewScreen(
                     noteService: widget.noteService,
+                    onThemeChanged: widget.onThemeChanged,
+                    currentThemeMode: widget.currentThemeMode,
                   ),
                 ),
               );

@@ -6,10 +6,12 @@ import 'package:yaml/yaml.dart';
 class AppConfig {
   final List<String> directories;
   final String defaultEditor;
+  final String themeMode; // 'light', 'dark', or 'system'
 
   AppConfig({
     required this.directories,
     this.defaultEditor = '',
+    this.themeMode = 'system',
   });
 
   factory AppConfig.fromMap(Map<String, dynamic> map) {
@@ -27,6 +29,7 @@ class AppConfig {
               .toList() ??
           [],
       defaultEditor: editor,
+      themeMode: map['themeMode']?.toString() ?? 'system',
     );
   }
 
@@ -34,6 +37,7 @@ class AppConfig {
     return {
       'directories': directories,
       'defaultEditor': defaultEditor,
+      'themeMode': themeMode,
     };
   }
 }
@@ -81,6 +85,7 @@ class ConfigService {
       _config = AppConfig(
         directories: [defaultNotesDir],
         defaultEditor: '',
+        themeMode: 'system',
       );
 
       await saveConfig(_config!);
@@ -102,6 +107,7 @@ class ConfigService {
 directories:
 ${config.directories.map((d) => '  - $d').join('\n')}
 defaultEditor: $editorValue
+themeMode: ${config.themeMode}
 ''';
 
     await configFile.writeAsString(yamlContent);

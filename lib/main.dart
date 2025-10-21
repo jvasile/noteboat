@@ -5,6 +5,8 @@ import 'services/note_service.dart';
 import 'screens/view_screen.dart';
 import 'screens/edit_screen.dart';
 
+export 'services/config_service.dart' show AppConfig;
+
 void main(List<String> args) async {
   // If CLI arguments are provided, run in CLI mode
   if (args.isNotEmpty) {
@@ -106,8 +108,71 @@ void printHelp() {
   print('  noteboat search foo bar baz');
 }
 
-class NoteboatApp extends StatelessWidget {
+class NoteboatApp extends StatefulWidget {
   const NoteboatApp({super.key});
+
+  @override
+  State<NoteboatApp> createState() => _NoteboatAppState();
+}
+
+class _NoteboatAppState extends State<NoteboatApp> {
+  ThemeMode _themeMode = ThemeMode.system;
+  ConfigService? _configService;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadThemePreference();
+  }
+
+  Future<void> _loadThemePreference() async {
+    _configService = ConfigService();
+    final config = await _configService!.loadConfig();
+    setState(() {
+      _themeMode = _themeModeFromString(config.themeMode);
+    });
+  }
+
+  ThemeMode _themeModeFromString(String mode) {
+    switch (mode) {
+      case 'light':
+        return ThemeMode.light;
+      case 'dark':
+        return ThemeMode.dark;
+      case 'system':
+        return ThemeMode.system;
+      default:
+        return ThemeMode.system;
+    }
+  }
+
+  String _themeModeToString(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.light:
+        return 'light';
+      case ThemeMode.dark:
+        return 'dark';
+      case ThemeMode.system:
+        return 'system';
+    }
+  }
+
+  Future<void> _toggleTheme(ThemeMode mode) async {
+    setState(() {
+      _themeMode = mode;
+    });
+
+    // Persist theme preference
+    if (_configService != null) {
+      final config = await _configService!.loadConfig();
+      final updatedConfig = AppConfig(
+        directories: config.directories,
+        defaultEditor: config.defaultEditor,
+        themeMode: _themeModeToString(mode),
+      );
+      await _configService!.saveConfig(updatedConfig);
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -117,13 +182,31 @@ class NoteboatApp extends StatelessWidget {
         colorScheme: ColorScheme.fromSeed(seedColor: Colors.blue),
         useMaterial3: true,
       ),
-      home: const NoteboatHome(),
+      darkTheme: ThemeData(
+        colorScheme: ColorScheme.fromSeed(
+          seedColor: Colors.blue,
+          brightness: Brightness.dark,
+        ),
+        useMaterial3: true,
+      ),
+      themeMode: _themeMode,
+      home: NoteboatHome(
+        onThemeChanged: _toggleTheme,
+        currentThemeMode: _themeMode,
+      ),
     );
   }
 }
 
 class NoteboatHome extends StatefulWidget {
-  const NoteboatHome({super.key});
+  final Function(ThemeMode) onThemeChanged;
+  final ThemeMode currentThemeMode;
+
+  const NoteboatHome({
+    super.key,
+    required this.onThemeChanged,
+    required this.currentThemeMode,
+  });
 
   @override
   State<NoteboatHome> createState() => _NoteboatHomeState();
@@ -170,6 +253,8 @@ class _NoteboatHomeState extends State<NoteboatHome> {
               builder: (context) => ViewScreen(
                 noteService: _noteService,
                 noteId: mainNote.id,
+                onThemeChanged: widget.onThemeChanged,
+                currentThemeMode: widget.currentThemeMode,
               ),
             ),
           );
