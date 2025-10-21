@@ -33,6 +33,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
   final FocusNode _searchFocusNode = FocusNode();
   final FocusNode _bodyFocusNode = FocusNode();
   int? _selectedResultIndex; // Track selected search result
+  final ScrollController _scrollController = ScrollController();
+  final Map<int, GlobalKey> _itemKeys = {}; // Keys for each list item
 
   @override
   void initState() {
@@ -59,7 +61,25 @@ class _ListViewScreenState extends State<ListViewScreen> {
     _searchController.dispose();
     _searchFocusNode.dispose();
     _bodyFocusNode.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _scrollToSelectedItem() {
+    if (_selectedResultIndex == null) return;
+
+    // Use post-frame callback to ensure the widget tree is built
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      final key = _itemKeys[_selectedResultIndex];
+      if (key?.currentContext != null) {
+        Scrollable.ensureVisible(
+          key!.currentContext!,
+          duration: const Duration(milliseconds: 200),
+          curve: Curves.easeInOut,
+          alignment: 0.5, // Center the item
+        );
+      }
+    });
   }
 
   Future<void> _loadNotes() async {
@@ -83,6 +103,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
     setState(() {
       _searchQuery = query;
       _selectedResultIndex = null; // Reset selection when search changes
+      _itemKeys.clear(); // Clear item keys when results change
       if (query.isEmpty) {
         _filteredNotes = _notes;
       } else {
@@ -408,6 +429,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                   _selectedResultIndex = _selectedResultIndex! + 1;
                 }
               });
+              _scrollToSelectedItem();
               return KeyEventResult.handled;
             }
 
@@ -420,6 +442,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                   _selectedResultIndex = _selectedResultIndex! - 1;
                 }
               });
+              _scrollToSelectedItem();
               return KeyEventResult.handled;
             }
 
@@ -457,11 +480,17 @@ class _ListViewScreenState extends State<ListViewScreen> {
               : RefreshIndicator(
                   onRefresh: _loadNotes,
                   child: ListView.builder(
+                    controller: _scrollController,
                     itemCount: _filteredNotes.length,
                     itemBuilder: (context, index) {
                       final note = _filteredNotes[index];
                       final isSelected = _selectedResultIndex == index;
+
+                      // Create or reuse a key for this item
+                      _itemKeys[index] ??= GlobalKey();
+
                       return Card(
+                        key: _itemKeys[index],
                         margin: const EdgeInsets.symmetric(
                           horizontal: 8,
                           vertical: 4,
