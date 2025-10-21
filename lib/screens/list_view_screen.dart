@@ -99,6 +99,25 @@ class _ListViewScreenState extends State<ListViewScreen> {
     });
   }
 
+  /// Converts CamelCase to spaced words
+  /// Example: "NewtownCompany" -> "Newtown Company"
+  String _camelCaseToSpaced(String text) {
+    if (text.isEmpty) return text;
+
+    final buffer = StringBuffer();
+    buffer.write(text[0]);
+
+    for (int i = 1; i < text.length; i++) {
+      if (text[i].toUpperCase() == text[i] && text[i].toLowerCase() != text[i]) {
+        // It's an uppercase letter
+        buffer.write(' ');
+      }
+      buffer.write(text[i]);
+    }
+
+    return buffer.toString();
+  }
+
   void _filterNotes(String query) {
     setState(() {
       _searchQuery = query;
@@ -108,10 +127,25 @@ class _ListViewScreenState extends State<ListViewScreen> {
         _filteredNotes = _notes;
       } else {
         final lowerQuery = query.toLowerCase();
+
+        // If query starts with #, create variants for hashtag search
+        final searchVariants = <String>[];
+        if (query.startsWith('#')) {
+          final tagWithoutHash = query.substring(1);
+          searchVariants.add(lowerQuery);                    // #NewtownCompany
+          searchVariants.add(tagWithoutHash.toLowerCase());  // NewtownCompany
+          searchVariants.add(_camelCaseToSpaced(tagWithoutHash).toLowerCase()); // Newtown Company
+        } else {
+          searchVariants.add(lowerQuery);
+        }
+
         _filteredNotes = _notes.where((note) {
-          return note.title.toLowerCase().contains(lowerQuery) ||
-              note.text.toLowerCase().contains(lowerQuery) ||
-              note.tags.any((tag) => tag.toLowerCase().contains(lowerQuery));
+          // Check if any variant matches
+          return searchVariants.any((variant) =>
+            note.title.toLowerCase().contains(variant) ||
+            note.text.toLowerCase().contains(variant) ||
+            note.tags.any((tag) => tag.toLowerCase().contains(variant))
+          );
         }).toList();
       }
     });
