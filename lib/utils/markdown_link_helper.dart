@@ -2,11 +2,35 @@ import 'dart:io';
 import 'package:url_launcher/url_launcher.dart';
 
 class MarkdownLinkHelper {
+  /// Converts CamelCase to spaced words
+  /// Example: "AmherstCollege" -> "Amherst College"
+  static String _camelCaseToSpaced(String text) {
+    if (text.isEmpty) return text;
+
+    final buffer = StringBuffer();
+    buffer.write(text[0]);
+
+    for (int i = 1; i < text.length; i++) {
+      if (text[i].toUpperCase() == text[i] && text[i].toLowerCase() != text[i]) {
+        // It's an uppercase letter
+        buffer.write(' ');
+      }
+      buffer.write(text[i]);
+    }
+
+    return buffer.toString();
+  }
+
   /// Converts CamelCase words, URLs, and hashtags in markdown text to clickable links
   /// Preserves code blocks and existing markdown links
   /// Fixes markdown links with spaces in targets by adding angle brackets
   /// Skips CamelCase words that match the current note title
-  static String makeLinksClickable(String text, String currentNoteTitle) {
+  /// Uses existingNoteTitles to check if spaced version of CamelCase exists
+  static String makeLinksClickable(
+    String text,
+    String currentNoteTitle, {
+    Set<String> existingNoteTitles = const {},
+  }) {
     // CamelCase pattern with negative lookbehind to not match if preceded by #
     final camelCasePattern = RegExp(r'(?<!#)\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b');
     final urlPattern = RegExp(r'(https?://[^\s\)<]+)');
@@ -81,9 +105,22 @@ class MarkdownLinkHelper {
       if (!shouldSkip(match.start, match.end)) {
         final camelCase = match.group(1)!;
         if (camelCase != currentNoteTitle) {
+          // Check if spaced version exists in note titles
+          String targetTitle = camelCase;
+          if (existingNoteTitles.isNotEmpty) {
+            final spacedVersion = _camelCaseToSpaced(camelCase);
+            if (existingNoteTitles.contains(spacedVersion)) {
+              // Use spaced version if it exists
+              targetTitle = spacedVersion;
+            }
+          }
+
+          // Wrap target in angle brackets if it contains spaces
+          final targetHref = targetTitle.contains(' ') ? '<$targetTitle>' : targetTitle;
+
           replacements.add(MapEntry(
             match.start,
-            MapEntry(camelCase, '[$camelCase]($camelCase)'),
+            MapEntry(camelCase, '[$camelCase]($targetHref)'),
           ));
         }
       }

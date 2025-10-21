@@ -121,7 +121,11 @@ class NoteMarkdownViewer extends StatelessWidget {
     );
 
     return MarkdownBody(
-      data: MarkdownLinkHelper.makeLinksClickable(processedText, noteTitle),
+      data: MarkdownLinkHelper.makeLinksClickable(
+        processedText,
+        noteTitle,
+        existingNoteTitles: existingNoteTitles,
+      ),
       selectable: selectable,
       styleSheet: styleSheet,
       builders: {
