@@ -514,13 +514,13 @@ class _ViewScreenState extends State<ViewScreen> {
             _handleDeleteNote();
             return KeyEventResult.handled;
           }
-          // Handle '+' key for add note - show type selector
-          if (event.character == '+' || event.logicalKey == LogicalKeyboardKey.add) {
+          // Handle new note hotkey - show type selector
+          if (HotkeyHelper.matches(event, _hotkeys.newNote)) {
             _showNoteTypeSelector();
             return KeyEventResult.handled;
           }
-          // Handle '/' key to switch to All Notes (search) screen
-          if (event.character == '/') {
+          // Handle search hotkey to switch to All Notes (search) screen
+          if (HotkeyHelper.matches(event, _hotkeys.search)) {
             Navigator.pushReplacement(
               context,
               MaterialPageRoute(

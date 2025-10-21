@@ -15,7 +15,7 @@ class HotkeyConfig {
   final String closeDialog;
 
   const HotkeyConfig({
-    this.newNote = '+',
+    this.newNote = '+,Add',
     this.search = '/',
     this.editNote = 'e',
     this.viewMode = 'v',
@@ -27,7 +27,7 @@ class HotkeyConfig {
 
   factory HotkeyConfig.fromMap(Map<String, dynamic> map) {
     return HotkeyConfig(
-      newNote: map['newNote']?.toString() ?? '+',
+      newNote: map['newNote']?.toString() ?? '+,Add',
       search: map['search']?.toString() ?? '/',
       editNote: map['editNote']?.toString() ?? 'e',
       viewMode: map['viewMode']?.toString() ?? 'v',

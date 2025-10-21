@@ -429,6 +429,12 @@ class _ListViewScreenState extends State<ListViewScreen> {
         autofocus: false,
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent) {
+            // Handle new note hotkey
+            if (HotkeyHelper.matches(event, _hotkeys.newNote)) {
+              _showNoteTypeSelector();
+              return KeyEventResult.handled;
+            }
+
             // Handle search hotkey to focus search bar when body is focused
             if (HotkeyHelper.matches(event, _hotkeys.search) && !_searchFocusNode.hasFocus) {
               _searchFocusNode.requestFocus();
