@@ -380,7 +380,7 @@ class _ViewScreenState extends State<ViewScreen> {
         content: TextField(
           controller: controller,
           decoration: const InputDecoration(
-            hintText: 'Note title (CamelCase)',
+            hintText: 'Note title',
             border: OutlineInputBorder(),
           ),
           autofocus: true,
