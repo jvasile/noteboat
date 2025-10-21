@@ -179,52 +179,14 @@ class _ViewScreenState extends State<ViewScreen> {
     );
   }
 
-  void _navigateToTagList(String tag) async {
-    final notes = await widget.noteService.getNotesByTag(tag);
-
-    if (!mounted) return;
-
-    showModalBottomSheet(
-      context: context,
-      builder: (context) => Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Text(
-              'Notes with tag #$tag',
-              style: Theme.of(context).textTheme.titleLarge,
-            ),
-          ),
-          Expanded(
-            child: ListView.builder(
-              itemCount: notes.length,
-              itemBuilder: (context, index) {
-                final note = notes[index];
-                return ListTile(
-                  title: Text(note.title),
-                  subtitle: Text(
-                    note.text.length > 50
-                        ? '${note.text.substring(0, 50)}...'
-                        : note.text,
-                    maxLines: 1,
-                  ),
-                  onTap: () {
-                    Navigator.pop(context);
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ViewScreen(
-                          noteService: widget.noteService,
-                          noteId: note.id,
-                        ),
-                      ),
-                    );
-                  },
-                );
-              },
-            ),
-          ),
-        ],
+  void _navigateToTagList(String tag) {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => ListViewScreen(
+          noteService: widget.noteService,
+          initialSearchQuery: '#$tag',
+        ),
       ),
     );
   }

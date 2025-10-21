@@ -6,8 +6,13 @@ import 'settings_screen.dart';
 
 class ListViewScreen extends StatefulWidget {
   final NoteService noteService;
+  final String? initialSearchQuery;
 
-  const ListViewScreen({super.key, required this.noteService});
+  const ListViewScreen({
+    super.key,
+    required this.noteService,
+    this.initialSearchQuery,
+  });
 
   @override
   State<ListViewScreen> createState() => _ListViewScreenState();
@@ -23,6 +28,10 @@ class _ListViewScreenState extends State<ListViewScreen> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialSearchQuery != null) {
+      _searchQuery = widget.initialSearchQuery!;
+      _searchController.text = widget.initialSearchQuery!;
+    }
     _loadNotes();
   }
 
@@ -39,8 +48,13 @@ class _ListViewScreenState extends State<ListViewScreen> {
 
     setState(() {
       _notes = notes;
-      _filteredNotes = notes;
       _isLoading = false;
+      // Apply initial search filter if provided
+      if (_searchQuery.isNotEmpty) {
+        _filterNotes(_searchQuery);
+      } else {
+        _filteredNotes = notes;
+      }
     });
   }
 
