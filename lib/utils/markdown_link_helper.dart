@@ -7,7 +7,8 @@ class MarkdownLinkHelper {
   /// Fixes markdown links with spaces in targets by adding angle brackets
   /// Skips CamelCase words that match the current note title
   static String makeLinksClickable(String text, String currentNoteTitle) {
-    final camelCasePattern = RegExp(r'\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b');
+    // CamelCase pattern with negative lookbehind to not match if preceded by #
+    final camelCasePattern = RegExp(r'(?<!#)\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b');
     final urlPattern = RegExp(r'(https?://[^\s\)<]+)');
     final hashtagPattern = RegExp(r'(#\w+)');
     final codeBlockPattern = RegExp(r'```[\s\S]*?```');
