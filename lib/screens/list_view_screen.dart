@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
 import 'view_screen.dart';
@@ -78,30 +79,67 @@ class _ListViewScreenState extends State<ListViewScreen> {
     });
   }
 
+  void _handleAddNoteShortcut() async {
+    final result = await _showCreateNoteDialog();
+    if (result != null && result.isNotEmpty) {
+      final newNote = await widget.noteService.createNote(
+        title: result,
+        text: '# $result\n\nStart writing here...',
+      );
+      _loadNotes();
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ViewScreen(
+              noteService: widget.noteService,
+              noteId: newNote.id,
+              onThemeChanged: widget.onThemeChanged,
+              currentThemeMode: widget.currentThemeMode,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('All Notes'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.settings),
-            tooltip: 'Settings',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => SettingsScreen(
-                    configService: widget.noteService.configService,
-                    onThemeChanged: widget.onThemeChanged,
-                    currentThemeMode: widget.currentThemeMode,
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          // Handle '+' key for add note
+          if (event.character == '+' || event.logicalKey == LogicalKeyboardKey.add) {
+            _handleAddNoteShortcut();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('All Notes'),
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          actions: [
+            IconButton(
+              icon: const Icon(Icons.settings),
+              tooltip: 'Settings',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SettingsScreen(
+                      configService: widget.noteService.configService,
+                      onThemeChanged: widget.onThemeChanged,
+                      currentThemeMode: widget.currentThemeMode,
+                    ),
                   ),
-                ),
-              );
-            },
-          ),
-        ],
+                );
+              },
+            ),
+          ],
         bottom: PreferredSize(
           preferredSize: const Size.fromHeight(60),
           child: Padding(
@@ -212,31 +250,9 @@ class _ListViewScreenState extends State<ListViewScreen> {
                   ),
                 ),
       floatingActionButton: FloatingActionButton(
-        onPressed: () async {
-          final result = await _showCreateNoteDialog();
-          if (result != null && result.isNotEmpty) {
-            final newNote = await widget.noteService.createNote(
-              title: result,
-              text: '# $result\n\nStart writing here...',
-            );
-            _loadNotes();
-
-            if (mounted) {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ViewScreen(
-                    noteService: widget.noteService,
-                    noteId: newNote.id,
-                    onThemeChanged: widget.onThemeChanged,
-                    currentThemeMode: widget.currentThemeMode,
-                  ),
-                ),
-              );
-            }
-          }
-        },
+        onPressed: _handleAddNoteShortcut,
         child: const Icon(Icons.add),
+      ),
       ),
     );
   }

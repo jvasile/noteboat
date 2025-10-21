@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
 import '../widgets/note_markdown_viewer.dart';
@@ -92,44 +93,115 @@ class _EditScreenState extends State<EditScreen> {
     }
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_isPreview ? 'Preview' : 'Edit Note'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        leading: IconButton(
-          icon: const Icon(Icons.close),
-          onPressed: () => Navigator.pop(context, false),
-        ),
+  void _togglePreview() {
+    setState(() => _isPreview = !_isPreview);
+  }
+
+  bool _hasUnsavedChanges() {
+    return _titleController.text != widget.note.title ||
+        _textController.text != widget.note.text;
+  }
+
+  Future<bool> _confirmDiscard() async {
+    if (!_hasUnsavedChanges()) {
+      return true;
+    }
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard Changes?'),
+        content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
         actions: [
-          IconButton(
-            icon: Icon(_isPreview ? Icons.edit : Icons.visibility),
-            tooltip: _isPreview ? 'Edit' : 'Preview',
-            onPressed: () {
-              setState(() => _isPreview = !_isPreview);
-            },
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
           ),
-          if (_isSaving)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
-                ),
-              ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.save),
-              tooltip: 'Save',
-              onPressed: _saveNote,
-            ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Discard'),
+          ),
         ],
       ),
-      body: _isPreview ? _buildPreview() : _buildEditor(),
+    );
+
+    return result ?? false;
+  }
+
+  Future<void> _handleClose() async {
+    if (await _confirmDiscard()) {
+      if (mounted) {
+        Navigator.pop(context, false);
+      }
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          // Handle Ctrl-P for preview toggle
+          final isControlPressed = HardwareKeyboard.instance.isControlPressed;
+          final isMetaPressed = HardwareKeyboard.instance.isMetaPressed;
+
+          if (event.logicalKey == LogicalKeyboardKey.keyP &&
+              (isControlPressed || isMetaPressed)) {
+            _togglePreview();
+            return KeyEventResult.handled;
+          }
+
+          // Handle Ctrl-S to save
+          if (event.logicalKey == LogicalKeyboardKey.keyS &&
+              (isControlPressed || isMetaPressed)) {
+            _saveNote();
+            return KeyEventResult.handled;
+          }
+
+          // Handle Escape to close
+          if (event.logicalKey == LogicalKeyboardKey.escape) {
+            _handleClose();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_isPreview ? 'Preview' : 'Edit Note'),
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          leading: IconButton(
+            icon: const Icon(Icons.close),
+            onPressed: _handleClose,
+          ),
+          actions: [
+            IconButton(
+              icon: Icon(_isPreview ? Icons.edit : Icons.visibility),
+              tooltip: _isPreview ? 'Edit' : 'Preview',
+              onPressed: _togglePreview,
+            ),
+            if (_isSaving)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                ),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.save),
+                tooltip: 'Save',
+                onPressed: _saveNote,
+              ),
+          ],
+        ),
+        body: _isPreview ? _buildPreview() : _buildEditor(),
+      ),
     );
   }
 

@@ -1,9 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
 import '../widgets/note_markdown_viewer.dart';
 import 'edit_screen.dart';
 import 'list_view_screen.dart';
+import 'settings_screen.dart';
 
 class ViewScreen extends StatefulWidget {
   final NoteService noteService;
@@ -212,109 +214,206 @@ class _ViewScreenState extends State<ViewScreen> {
     );
   }
 
+  void _handleEditShortcut() async {
+    if (_note != null) {
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (context) => EditScreen(
+            noteService: widget.noteService,
+            note: _note!,
+          ),
+        ),
+      );
+
+      if (result == true) {
+        _loadNote();
+      }
+    }
+  }
+
+  void _handleAddNoteShortcut() async {
+    final result = await _showCreateNoteDialog();
+    if (result != null && result.isNotEmpty) {
+      final newNote = await widget.noteService.createNote(
+        title: result,
+        text: '# $result\n\nStart writing here...',
+      );
+
+      if (mounted) {
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ViewScreen(
+              noteService: widget.noteService,
+              noteId: newNote.id,
+              onThemeChanged: widget.onThemeChanged,
+              currentThemeMode: widget.currentThemeMode,
+            ),
+          ),
+        );
+      }
+    }
+  }
+
+  Future<String?> _showCreateNoteDialog() {
+    final controller = TextEditingController();
+
+    return showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Create New Note'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            hintText: 'Note title (CamelCase)',
+            border: OutlineInputBorder(),
+          ),
+          autofocus: true,
+          onSubmitted: (value) => Navigator.pop(context, value),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Create'),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: Text(_note?.title ?? 'Note'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.list),
-            tooltip: 'All Notes',
-            onPressed: () {
-              Navigator.pushReplacement(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => ListViewScreen(
-                    noteService: widget.noteService,
-                    onThemeChanged: widget.onThemeChanged,
-                    currentThemeMode: widget.currentThemeMode,
-                  ),
-                ),
-              );
-            },
-          ),
-          if (_note != null)
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          // Handle 'e' key for edit
+          if (event.logicalKey == LogicalKeyboardKey.keyE) {
+            _handleEditShortcut();
+            return KeyEventResult.handled;
+          }
+          // Handle '+' key for add note
+          if (event.character == '+' || event.logicalKey == LogicalKeyboardKey.add) {
+            _handleAddNoteShortcut();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: Text(_note?.title ?? 'Note'),
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          actions: [
             IconButton(
-              icon: const Icon(Icons.edit),
-              tooltip: 'Edit',
-              onPressed: () async {
-                final result = await Navigator.push(
+              icon: const Icon(Icons.list),
+              tooltip: 'All Notes',
+              onPressed: () {
+                Navigator.pushReplacement(
                   context,
                   MaterialPageRoute(
-                    builder: (context) => EditScreen(
+                    builder: (context) => ListViewScreen(
                       noteService: widget.noteService,
-                      note: _note!,
+                      onThemeChanged: widget.onThemeChanged,
+                      currentThemeMode: widget.currentThemeMode,
                     ),
                   ),
                 );
-
-                if (result == true) {
-                  _loadNote();
-                }
               },
             ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
-                  child: Column(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const Icon(Icons.error_outline, size: 64, color: Colors.red),
-                      const SizedBox(height: 16),
-                      Text(
-                        _error!,
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 16),
-                      FilledButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Go Back'),
-                      ),
-                    ],
+            if (_note != null)
+              IconButton(
+                icon: const Icon(Icons.edit),
+                tooltip: 'Edit',
+                onPressed: _handleEditShortcut,
+              ),
+            IconButton(
+              icon: const Icon(Icons.settings),
+              tooltip: 'Settings',
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => SettingsScreen(
+                      configService: widget.noteService.configService,
+                      onThemeChanged: widget.onThemeChanged,
+                      currentThemeMode: widget.currentThemeMode,
+                    ),
                   ),
-                )
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.all(16),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Markdown content
-                      NoteMarkdownViewer(
-                        text: _note!.text,
-                        noteTitle: _note!.title,
-                        onNoteLinkTap: _navigateToNote,
-                        onTagTap: _navigateToTagList,
-                      ),
-
-                      const SizedBox(height: 24),
-                      const Divider(),
-                      const SizedBox(height: 16),
-
-                      // Footer metadata
-                      Text(
-                        'Modified: ${_formatDateTime(_note!.mtime)}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      const SizedBox(height: 4),
-                      Text(
-                        'ID: ${_note!.id}',
-                        style: Theme.of(context).textTheme.bodySmall,
-                      ),
-                      if (_note!.editors.isNotEmpty) ...[
-                        const SizedBox(height: 4),
+                );
+              },
+            ),
+          ],
+        ),
+        body: _isLoading
+            ? const Center(child: CircularProgressIndicator())
+            : _error != null
+                ? Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, size: 64, color: Colors.red),
+                        const SizedBox(height: 16),
                         Text(
-                          'Editors: ${_note!.editors.join(', ')}',
-                          style: Theme.of(context).textTheme.bodySmall,
+                          _error!,
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 16),
+                        FilledButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Go Back'),
                         ),
                       ],
-                    ],
+                    ),
+                  )
+                : SingleChildScrollView(
+                    padding: const EdgeInsets.all(16),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // Markdown content
+                        NoteMarkdownViewer(
+                          text: _note!.text,
+                          noteTitle: _note!.title,
+                          onNoteLinkTap: _navigateToNote,
+                          onTagTap: _navigateToTagList,
+                        ),
+
+                        const SizedBox(height: 24),
+                        const Divider(),
+                        const SizedBox(height: 16),
+
+                        // Footer metadata
+                        Text(
+                          'Modified: ${_formatDateTime(_note!.mtime)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'ID: ${_note!.id}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                        if (_note!.editors.isNotEmpty) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            'Editors: ${_note!.editors.join(', ')}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ],
+                    ),
                   ),
-                ),
+        floatingActionButton: FloatingActionButton(
+          onPressed: _handleAddNoteShortcut,
+          tooltip: 'Add Note',
+          child: const Icon(Icons.add),
+        ),
+      ),
     );
   }
 

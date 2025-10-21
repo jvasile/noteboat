@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../services/config_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -50,6 +51,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
     });
   }
 
+  bool _hasUnsavedChanges() {
+    if (_config == null) return false;
+
+    // Check if editor field changed
+    final editorChanged = _editorController.text.trim() != _config!.defaultEditor;
+
+    // Check if theme changed (compare with original from widget parameter)
+    final originalTheme = widget.currentThemeMode ?? ThemeMode.system;
+    final themeChanged = _selectedThemeMode != originalTheme;
+
+    return editorChanged || themeChanged;
+  }
+
+  Future<bool> _confirmDiscard() async {
+    if (!_hasUnsavedChanges()) {
+      return true;
+    }
+
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Discard Changes?'),
+        content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Discard'),
+          ),
+        ],
+      ),
+    );
+
+    return result ?? false;
+  }
+
+  Future<void> _handleClose() async {
+    if (await _confirmDiscard()) {
+      if (mounted) {
+        Navigator.pop(context);
+      }
+    }
+  }
+
   Future<void> _saveConfig() async {
     if (_config == null) return;
 
@@ -85,30 +133,56 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        actions: [
-          if (_isSaving)
-            const Center(
-              child: Padding(
-                padding: EdgeInsets.all(16.0),
-                child: SizedBox(
-                  width: 20,
-                  height: 20,
-                  child: CircularProgressIndicator(strokeWidth: 2),
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          final isControlPressed = HardwareKeyboard.instance.isControlPressed;
+          final isMetaPressed = HardwareKeyboard.instance.isMetaPressed;
+
+          // Handle Ctrl-S to save
+          if (event.logicalKey == LogicalKeyboardKey.keyS &&
+              (isControlPressed || isMetaPressed)) {
+            _saveConfig();
+            return KeyEventResult.handled;
+          }
+
+          // Handle Escape to close
+          if (event.logicalKey == LogicalKeyboardKey.escape) {
+            _handleClose();
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Settings'),
+          backgroundColor: Theme.of(context).colorScheme.inversePrimary,
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: _handleClose,
+          ),
+          actions: [
+            if (_isSaving)
+              const Center(
+                child: Padding(
+                  padding: EdgeInsets.all(16.0),
+                  child: SizedBox(
+                    width: 20,
+                    height: 20,
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
                 ),
+              )
+            else
+              IconButton(
+                icon: const Icon(Icons.save),
+                tooltip: 'Save',
+                onPressed: _saveConfig,
               ),
-            )
-          else
-            IconButton(
-              icon: const Icon(Icons.save),
-              tooltip: 'Save',
-              onPressed: _saveConfig,
-            ),
-        ],
-      ),
+          ],
+        ),
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
@@ -246,6 +320,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
+      ),
     );
   }
 }
