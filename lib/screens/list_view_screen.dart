@@ -177,7 +177,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                               MaterialPageRoute(
                                 builder: (context) => ViewScreen(
                                   noteService: widget.noteService,
-                                  noteTitle: note.title,
+                                  noteId: note.id,
                                 ),
                               ),
                             );
@@ -193,7 +193,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
         onPressed: () async {
           final result = await _showCreateNoteDialog();
           if (result != null && result.isNotEmpty) {
-            await widget.noteService.createNote(
+            final newNote = await widget.noteService.createNote(
               title: result,
               text: '# $result\n\nStart writing here...',
             );
@@ -205,7 +205,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                 MaterialPageRoute(
                   builder: (context) => ViewScreen(
                     noteService: widget.noteService,
-                    noteTitle: result,
+                    noteId: newNote.id,
                   ),
                 ),
               );

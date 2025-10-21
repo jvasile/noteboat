@@ -50,11 +50,11 @@ class _EditScreenState extends State<EditScreen> {
       return;
     }
 
-    // Check if title contains spaces
-    if (title.contains(' ')) {
+    // Check if title contains pipe character (reserved for disambiguation)
+    if (title.contains('|')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Title should be one word (use CamelCase)'),
+          content: Text('Title cannot contain | character'),
         ),
       );
       return;
@@ -145,8 +145,8 @@ class _EditScreenState extends State<EditScreen> {
           TextField(
             controller: _titleController,
             decoration: const InputDecoration(
-              labelText: 'Title (CamelCase)',
-              hintText: 'MyNoteName',
+              labelText: 'Title',
+              hintText: 'MyNoteName or My Note Name',
               border: OutlineInputBorder(),
             ),
             style: Theme.of(context).textTheme.titleLarge,
@@ -166,7 +166,8 @@ class _EditScreenState extends State<EditScreen> {
                     style: TextStyle(fontWeight: FontWeight.bold),
                   ),
                   SizedBox(height: 4),
-                  Text('• Use CamelCase words to create links: MyOtherNote'),
+                  Text('• CamelCase words auto-link: MyOtherNote'),
+                  Text('• Link titles with spaces: [My Note](My Note)'),
                   Text('• Add tags with #hashtag'),
                   Text('• Use # for headings, ** for bold, * for italic'),
                   Text('• Use - or * for bullet lists'),

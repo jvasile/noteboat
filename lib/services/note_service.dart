@@ -9,8 +9,9 @@ import 'file_service.dart';
 
 class NoteService {
   final ConfigService configService;
-  final Map<String, Note> _noteCache = {}; // Cache notes by title (lowercase)
-  final Map<String, String> _noteFilePaths = {}; // Map title -> file path
+  final Map<String, List<Note>> _noteCache = {}; // Cache notes by title (lowercase) - can have duplicates
+  final Map<String, Note> _noteCacheById = {}; // Cache notes by ID
+  final Map<String, String> _noteFilePaths = {}; // Map ID -> file path
   bool _initialized = false;
 
   NoteService(this.configService);
@@ -26,6 +27,7 @@ class NoteService {
   // Load all notes from all configured directories
   Future<void> _loadAllNotes() async {
     _noteCache.clear();
+    _noteCacheById.clear();
     _noteFilePaths.clear();
 
     final directories = await configService.getAllDirectories();
@@ -36,13 +38,17 @@ class NoteService {
       for (final filePath in noteFiles) {
         final note = await FileService.readNoteFromFile(filePath);
         if (note != null) {
-          final key = note.title.toLowerCase();
+          final titleKey = note.title.toLowerCase();
 
-          // Handle duplicate titles - keep the one with matching @id or the first one
-          if (!_noteCache.containsKey(key)) {
-            _noteCache[key] = note;
-            _noteFilePaths[key] = filePath;
+          // Add to title cache (supporting multiple notes with same title)
+          if (!_noteCache.containsKey(titleKey)) {
+            _noteCache[titleKey] = [];
           }
+          _noteCache[titleKey]!.add(note);
+
+          // Add to ID cache
+          _noteCacheById[note.id] = note;
+          _noteFilePaths[note.id] = filePath;
         }
       }
     }
@@ -51,13 +57,28 @@ class NoteService {
   // Get all notes
   Future<List<Note>> getAllNotes() async {
     if (!_initialized) await initialize();
-    return _noteCache.values.toList()..sort((a, b) => b.mtime.compareTo(a.mtime));
+    return _noteCacheById.values.toList()..sort((a, b) => b.mtime.compareTo(a.mtime));
   }
 
   // Get note by title (case-insensitive)
+  // Returns first note if multiple exist, or null if none exist
   Future<Note?> getNoteByTitle(String title) async {
     if (!_initialized) await initialize();
-    return _noteCache[title.toLowerCase()];
+    final notes = _noteCache[title.toLowerCase()];
+    return (notes != null && notes.isNotEmpty) ? notes.first : null;
+  }
+
+  // Get all notes by title (case-insensitive)
+  // Returns empty list if no notes found
+  Future<List<Note>> getNotesByTitle(String title) async {
+    if (!_initialized) await initialize();
+    return _noteCache[title.toLowerCase()] ?? [];
+  }
+
+  // Get note by ID
+  Future<Note?> getNoteById(String id) async {
+    if (!_initialized) await initialize();
+    return _noteCacheById[id];
   }
 
   // Search notes (case-insensitive, searches all fields)
@@ -71,7 +92,7 @@ class NoteService {
     final lowerQuery = query.toLowerCase();
     final results = <Note>[];
 
-    for (final note in _noteCache.values) {
+    for (final note in _noteCacheById.values) {
       // Search in title, text, tags, links, and extra fields
       if (note.title.toLowerCase().contains(lowerQuery) ||
           note.text.toLowerCase().contains(lowerQuery) ||
@@ -93,7 +114,7 @@ class NoteService {
     final lowerTag = tag.toLowerCase();
     final results = <Note>[];
 
-    for (final note in _noteCache.values) {
+    for (final note in _noteCacheById.values) {
       if (note.tags.any((t) => t.toLowerCase() == lowerTag)) {
         results.add(note);
       }
@@ -128,24 +149,33 @@ class NoteService {
 
     // Get file path
     String filePath;
-    final key = updatedNote.title.toLowerCase();
+    final titleKey = updatedNote.title.toLowerCase();
+    final id = updatedNote.id;
 
-    if (existingTitle != null && existingTitle.toLowerCase() != key) {
-      // Title changed - delete old file and create new one
-      final oldKey = existingTitle.toLowerCase();
-      final oldPath = _noteFilePaths[oldKey];
+    if (existingTitle != null && existingTitle.toLowerCase() != titleKey) {
+      // Title changed - need to update title cache and possibly delete old file
+      final oldTitleKey = existingTitle.toLowerCase();
+
+      // Remove from old title list
+      if (_noteCache.containsKey(oldTitleKey)) {
+        _noteCache[oldTitleKey]!.removeWhere((n) => n.id == id);
+        if (_noteCache[oldTitleKey]!.isEmpty) {
+          _noteCache.remove(oldTitleKey);
+        }
+      }
+
+      // Delete old file if exists
+      final oldPath = _noteFilePaths[id];
       if (oldPath != null) {
         await FileService.deleteNoteFile(oldPath);
-        _noteCache.remove(oldKey);
-        _noteFilePaths.remove(oldKey);
       }
 
       // Create new file path
       final writeDir = await configService.getWriteDirectory();
       filePath = path.join(writeDir, '${updatedNote.title}.md');
-    } else if (_noteFilePaths.containsKey(key)) {
+    } else if (_noteFilePaths.containsKey(id)) {
       // Update existing note
-      filePath = _noteFilePaths[key]!;
+      filePath = _noteFilePaths[id]!;
     } else {
       // New note
       final writeDir = await configService.getWriteDirectory();
@@ -155,9 +185,19 @@ class NoteService {
     // Write to file
     await FileService.writeNoteToFile(updatedNote, filePath);
 
-    // Update cache
-    _noteCache[key] = updatedNote;
-    _noteFilePaths[key] = filePath;
+    // Update caches
+    // Update title cache
+    if (!_noteCache.containsKey(titleKey)) {
+      _noteCache[titleKey] = [];
+    }
+    // Remove old entry from title cache (in case it exists)
+    _noteCache[titleKey]!.removeWhere((n) => n.id == id);
+    // Add updated note
+    _noteCache[titleKey]!.add(updatedNote);
+
+    // Update ID cache
+    _noteCacheById[id] = updatedNote;
+    _noteFilePaths[id] = filePath;
   }
 
   // Create a new note
@@ -187,24 +227,45 @@ class NoteService {
     return note;
   }
 
-  // Delete a note
-  Future<void> deleteNote(String title) async {
+  // Delete a note by ID
+  Future<void> deleteNoteById(String id) async {
     if (!_initialized) await initialize();
 
-    final key = title.toLowerCase();
-    final filePath = _noteFilePaths[key];
+    final note = _noteCacheById[id];
+    if (note == null) return;
 
+    final filePath = _noteFilePaths[id];
     if (filePath != null) {
       await FileService.deleteNoteFile(filePath);
-      _noteCache.remove(key);
-      _noteFilePaths.remove(key);
+    }
+
+    // Remove from title cache
+    final titleKey = note.title.toLowerCase();
+    if (_noteCache.containsKey(titleKey)) {
+      _noteCache[titleKey]!.removeWhere((n) => n.id == id);
+      if (_noteCache[titleKey]!.isEmpty) {
+        _noteCache.remove(titleKey);
+      }
+    }
+
+    // Remove from ID cache
+    _noteCacheById.remove(id);
+    _noteFilePaths.remove(id);
+  }
+
+  // Delete a note by title (deletes first note with that title if multiple exist)
+  Future<void> deleteNote(String title) async {
+    final note = await getNoteByTitle(title);
+    if (note != null) {
+      await deleteNoteById(note.id);
     }
   }
 
   // Check if a note exists
   Future<bool> noteExists(String title) async {
     if (!_initialized) await initialize();
-    return _noteCache.containsKey(title.toLowerCase());
+    final notes = _noteCache[title.toLowerCase()];
+    return notes != null && notes.isNotEmpty;
   }
 
   // Ensure "Main" note exists

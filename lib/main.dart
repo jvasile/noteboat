@@ -162,31 +162,17 @@ class _NoteboatHomeState extends State<NoteboatHome> {
 
       // Navigate to appropriate screen
       if (mounted) {
-        if (_mainNoteExists) {
+        if (mainNote != null) {
           // Show Main note
           Navigator.pushReplacement(
             context,
             MaterialPageRoute(
               builder: (context) => ViewScreen(
                 noteService: _noteService,
-                noteTitle: 'Main',
+                noteId: mainNote.id,
               ),
             ),
           );
-        } else {
-          // Show edit screen for Main note (shouldn't happen, but just in case)
-          final mainNote = await _noteService.getNoteByTitle('Main');
-          if (mainNote != null) {
-            Navigator.pushReplacement(
-              context,
-              MaterialPageRoute(
-                builder: (context) => EditScreen(
-                  noteService: _noteService,
-                  note: mainNote,
-                ),
-              ),
-            );
-          }
         }
       }
     } catch (e) {
