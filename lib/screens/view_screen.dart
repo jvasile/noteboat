@@ -227,7 +227,7 @@ class _ViewScreenState extends State<ViewScreen> {
 
   void _handleEditShortcut() async {
     if (_note != null) {
-      final result = await Navigator.push(
+      await Navigator.push(
         context,
         MaterialPageRoute(
           builder: (context) => NoteTypeRegistry.instance
@@ -241,9 +241,9 @@ class _ViewScreenState extends State<ViewScreen> {
         ),
       );
 
-      if (result == true) {
-        _loadNote();
-      }
+      // Always reload note after returning from edit mode
+      // This catches both app edits and external file edits
+      _loadNote();
     }
   }
 
@@ -398,10 +398,9 @@ class _ViewScreenState extends State<ViewScreen> {
                               onComplete: (saved) => Navigator.pop(context, saved),
                             ),
                       ),
-                    ).then((result) {
-                      if (result == true) {
-                        _loadNote();
-                      }
+                    ).then((_) {
+                      // Always reload note after returning from edit mode
+                      _loadNote();
                     });
                   },
                 );
