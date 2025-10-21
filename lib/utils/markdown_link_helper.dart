@@ -4,6 +4,7 @@ import 'package:url_launcher/url_launcher.dart';
 class MarkdownLinkHelper {
   /// Converts CamelCase words, URLs, and hashtags in markdown text to clickable links
   /// Preserves code blocks and existing markdown links
+  /// Fixes markdown links with spaces in targets by adding angle brackets
   /// Skips CamelCase words that match the current note title
   static String makeLinksClickable(String text, String currentNoteTitle) {
     final camelCasePattern = RegExp(r'\b([A-Z][a-z]+(?:[A-Z][a-z]+)+)\b');
@@ -13,17 +14,51 @@ class MarkdownLinkHelper {
     final inlineCodePattern = RegExp(r'`[^`]+`');
     final linkPattern = RegExp(r'\[([^\]]+)\]\(([^)]+)\)');
 
-    final List<MapEntry<int, int>> skipRanges = [];
-
-    for (final match in codeBlockPattern.allMatches(text)) {
-      skipRanges.add(MapEntry(match.start, match.end));
-    }
-
-    for (final match in inlineCodePattern.allMatches(text)) {
-      skipRanges.add(MapEntry(match.start, match.end));
-    }
+    // First pass: fix markdown links with spaces in targets
+    String result = text;
+    final List<MapEntry<int, MapEntry<String, String>>> linkFixes = [];
 
     for (final match in linkPattern.allMatches(text)) {
+      final displayText = match.group(1)!;
+      final target = match.group(2)!;
+
+      // If target contains spaces and isn't already wrapped in angle brackets
+      // and isn't a URL, wrap it in angle brackets
+      if (target.contains(' ') &&
+          !target.startsWith('<') &&
+          !target.startsWith('http://') &&
+          !target.startsWith('https://')) {
+        final originalLink = match.group(0)!;
+        final fixedLink = '[$displayText](<$target>)';
+        linkFixes.add(MapEntry(
+          match.start,
+          MapEntry(originalLink, fixedLink),
+        ));
+      }
+    }
+
+    // Apply fixes in reverse order to maintain positions
+    linkFixes.sort((a, b) => b.key.compareTo(a.key));
+    for (final fix in linkFixes) {
+      final start = fix.key;
+      final original = fix.value.key;
+      final fixed = fix.value.value;
+      final end = start + original.length;
+      result = result.substring(0, start) + fixed + result.substring(end);
+    }
+
+    // Now build skip ranges from the fixed text
+    final List<MapEntry<int, int>> skipRanges = [];
+
+    for (final match in codeBlockPattern.allMatches(result)) {
+      skipRanges.add(MapEntry(match.start, match.end));
+    }
+
+    for (final match in inlineCodePattern.allMatches(result)) {
+      skipRanges.add(MapEntry(match.start, match.end));
+    }
+
+    for (final match in linkPattern.allMatches(result)) {
       skipRanges.add(MapEntry(match.start, match.end));
     }
 
@@ -39,10 +74,9 @@ class MarkdownLinkHelper {
       return false;
     }
 
-    String result = text;
     final List<MapEntry<int, MapEntry<String, String>>> replacements = [];
 
-    for (final match in camelCasePattern.allMatches(text)) {
+    for (final match in camelCasePattern.allMatches(result)) {
       if (!shouldSkip(match.start, match.end)) {
         final camelCase = match.group(1)!;
         if (camelCase != currentNoteTitle) {
@@ -54,7 +88,7 @@ class MarkdownLinkHelper {
       }
     }
 
-    for (final match in urlPattern.allMatches(text)) {
+    for (final match in urlPattern.allMatches(result)) {
       if (!shouldSkip(match.start, match.end)) {
         final url = match.group(1)!;
         replacements.add(MapEntry(
@@ -64,7 +98,7 @@ class MarkdownLinkHelper {
       }
     }
 
-    for (final match in hashtagPattern.allMatches(text)) {
+    for (final match in hashtagPattern.allMatches(result)) {
       if (!shouldSkip(match.start, match.end)) {
         final hashtag = match.group(1)!;
         replacements.add(MapEntry(
