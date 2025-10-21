@@ -110,18 +110,18 @@ class NoteService {
     final links = LinkExtractor.extractAllLinks(note.text, note.extraFields);
     final tags = TagExtractor.extractAllTags(note.text, note.extraFields);
 
-    // Add current user to authors list if not already present
+    // Add current user to editors list if not already present
     final config = await configService.loadConfig();
-    final currentAuthor = config.defaultAuthor;
-    final updatedAuthors = List<String>.from(note.authors);
-    if (currentAuthor.isNotEmpty && !updatedAuthors.contains(currentAuthor)) {
-      updatedAuthors.add(currentAuthor);
+    final currentEditor = config.defaultEditor;
+    final updatedEditors = List<String>.from(note.editors);
+    if (currentEditor.isNotEmpty && !updatedEditors.contains(currentEditor)) {
+      updatedEditors.add(currentEditor);
     }
 
     final updatedNote = note.copyWith(
       links: links,
       tags: tags,
-      authors: updatedAuthors,
+      editors: updatedEditors,
       mtime: DateTime.now(),
     );
 
@@ -167,17 +167,17 @@ class NoteService {
     Map<String, dynamic>? extraFields,
   }) async {
     final config = await configService.loadConfig();
-    final defaultAuthor = config.defaultAuthor;
+    final defaultEditor = config.defaultEditor;
 
-    // Start with default author in the list if provided
-    final authors = defaultAuthor.isNotEmpty ? [defaultAuthor] : <String>[];
+    // Start with default editor in the list if provided
+    final editors = defaultEditor.isNotEmpty ? [defaultEditor] : <String>[];
 
     final note = Note(
       id: const Uuid().v4(),
       title: title,
       text: text,
       mtime: DateTime.now(),
-      authors: authors,
+      editors: editors,
       types: types,
       extraFields: extraFields,
     );

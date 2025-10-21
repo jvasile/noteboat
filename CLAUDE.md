@@ -9,7 +9,7 @@ supports creating, editing, browsing, and searching notes with automatic
 CamelCase link detection. The data model is document-based and adopts some
 elements of JSON-LD.  Notes are hierarchically typed with defined schemas.
 
-The base type is the note.  It has a title, mtime, author, and text.  The text
+The base type is the note.  It has a title, mtime, editors, and text.  The text
 field is markdown and allows for linking to another note.  It also has some
 metadata:  @type, which is a list of the current type and parent types. @id
 should contain a guid for the object. 

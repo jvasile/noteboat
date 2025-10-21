@@ -3,7 +3,7 @@ class Note {
   final String title; // One word, CamelCase
   final String text; // Markdown content
   final DateTime mtime; // Modification time
-  final List<String> authors; // List of authors who have edited this note
+  final List<String> editors; // List of editors who have edited this note
   final List<String> types; // @type - hierarchical type list
   final List<String> links; // _links - derived field
   final List<String> tags; // _tags - derived field
@@ -14,12 +14,12 @@ class Note {
     required this.title,
     required this.text,
     required this.mtime,
-    List<String>? authors,
+    List<String>? editors,
     List<String>? types,
     List<String>? links,
     List<String>? tags,
     Map<String, dynamic>? extraFields,
-  })  : authors = authors ?? [],
+  })  : editors = editors ?? [],
         types = types ?? ['note'],
         links = links ?? [],
         tags = tags ?? [],
@@ -27,14 +27,16 @@ class Note {
 
   // Convert from Map (YAML frontmatter)
   factory Note.fromMap(Map<String, dynamic> map, String bodyText) {
-    // Handle both old 'author' (string) and new 'authors' (list) for backwards compatibility
-    List<String> authorsList = [];
-    if (map['authors'] != null) {
-      authorsList = (map['authors'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    // Handle 'editors', and old 'author'/'authors' fields for backwards compatibility
+    List<String> editorsList = [];
+    if (map['editors'] != null) {
+      editorsList = (map['editors'] as List?)?.map((e) => e.toString()).toList() ?? [];
+    } else if (map['authors'] != null) {
+      editorsList = (map['authors'] as List?)?.map((e) => e.toString()).toList() ?? [];
     } else if (map['author'] != null) {
       final author = map['author']?.toString() ?? '';
       if (author.isNotEmpty) {
-        authorsList = [author];
+        editorsList = [author];
       }
     }
 
@@ -45,7 +47,7 @@ class Note {
       mtime: map['mtime'] != null
           ? DateTime.parse(map['mtime'].toString())
           : DateTime.now(),
-      authors: authorsList,
+      editors: editorsList,
       types: (map['@type'] as List?)?.map((e) => e.toString()).toList() ?? ['note'],
       links: (map['_links'] as List?)?.map((e) => e.toString()).toList() ?? [],
       tags: (map['_tags'] as List?)?.map((e) => e.toString()).toList() ?? [],
@@ -53,6 +55,8 @@ class Note {
         ..remove('@id')
         ..remove('title')
         ..remove('mtime')
+        ..remove('editor')
+        ..remove('editors')
         ..remove('author')
         ..remove('authors')
         ..remove('@type')
@@ -67,7 +71,7 @@ class Note {
       '@id': id,
       'title': title,
       'mtime': mtime.toIso8601String(),
-      'authors': authors,
+      'editors': editors,
       '@type': types,
       '_links': links,
       '_tags': tags,
@@ -81,7 +85,7 @@ class Note {
     String? title,
     String? text,
     DateTime? mtime,
-    List<String>? authors,
+    List<String>? editors,
     List<String>? types,
     List<String>? links,
     List<String>? tags,
@@ -92,7 +96,7 @@ class Note {
       title: title ?? this.title,
       text: text ?? this.text,
       mtime: mtime ?? this.mtime,
-      authors: authors ?? this.authors,
+      editors: editors ?? this.editors,
       types: types ?? this.types,
       links: links ?? this.links,
       tags: tags ?? this.tags,

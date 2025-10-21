@@ -191,9 +191,9 @@ class _ViewScreenState extends State<ViewScreen> {
                         'Modified: ${_formatDateTime(_note!.mtime)}',
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
-                      if (_note!.authors.isNotEmpty) ...[
+                      if (_note!.editors.isNotEmpty) ...[
                         Text(
-                          'Authors: ${_note!.authors.join(', ')}',
+                          'Editors: ${_note!.editors.join(', ')}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ],

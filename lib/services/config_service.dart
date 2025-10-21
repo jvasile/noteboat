@@ -5,27 +5,35 @@ import 'package:yaml/yaml.dart';
 
 class AppConfig {
   final List<String> directories;
-  final String defaultAuthor;
+  final String defaultEditor;
 
   AppConfig({
     required this.directories,
-    this.defaultAuthor = '',
+    this.defaultEditor = '',
   });
 
   factory AppConfig.fromMap(Map<String, dynamic> map) {
+    // Handle both 'defaultEditor' and old 'defaultAuthor' for backward compatibility
+    String editor = '';
+    if (map['defaultEditor'] != null) {
+      editor = map['defaultEditor']?.toString() ?? '';
+    } else if (map['defaultAuthor'] != null) {
+      editor = map['defaultAuthor']?.toString() ?? '';
+    }
+
     return AppConfig(
       directories: (map['directories'] as List?)
               ?.map((e) => e.toString())
               .toList() ??
           [],
-      defaultAuthor: map['defaultAuthor']?.toString() ?? '',
+      defaultEditor: editor,
     );
   }
 
   Map<String, dynamic> toMap() {
     return {
       'directories': directories,
-      'defaultAuthor': defaultAuthor,
+      'defaultEditor': defaultEditor,
     };
   }
 }
@@ -72,7 +80,7 @@ class ConfigService {
 
       _config = AppConfig(
         directories: [defaultNotesDir],
-        defaultAuthor: '',
+        defaultEditor: '',
       );
 
       await saveConfig(_config!);
@@ -86,14 +94,14 @@ class ConfigService {
     final configPath = await _getConfigPath();
     final configFile = File(configPath);
 
-    final authorValue = config.defaultAuthor.isEmpty
+    final editorValue = config.defaultEditor.isEmpty
         ? '""'
-        : config.defaultAuthor;
+        : config.defaultEditor;
 
     final yamlContent = '''# Noteboat Configuration
 directories:
 ${config.directories.map((d) => '  - $d').join('\n')}
-defaultAuthor: $authorValue
+defaultEditor: $editorValue
 ''';
 
     await configFile.writeAsString(yamlContent);
