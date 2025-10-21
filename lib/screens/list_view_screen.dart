@@ -112,6 +112,24 @@ class _ListViewScreenState extends State<ListViewScreen> {
     _loadNotes();
   }
 
+  Future<void> _navigateToEditor(Note note) async {
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => NoteTypeRegistry.instance
+            .getHandler(note.types)
+            .buildEditor(
+              context: context,
+              note: note,
+              noteService: widget.noteService,
+              onComplete: (saved) => Navigator.pop(context, saved),
+            ),
+      ),
+    );
+    // Reload notes when returning
+    _loadNotes();
+  }
+
   void _handleAddNoteShortcut() async {
     await _handleAddNoteWithType('note');
   }
@@ -408,6 +426,12 @@ class _ListViewScreenState extends State<ListViewScreen> {
             // Enter: open selected result
             if (event.logicalKey == LogicalKeyboardKey.enter && _selectedResultIndex != null) {
               _navigateToNote(_filteredNotes[_selectedResultIndex!]);
+              return KeyEventResult.handled;
+            }
+
+            // 'e': open selected result in edit mode
+            if (event.character == 'e' && _selectedResultIndex != null) {
+              _navigateToEditor(_filteredNotes[_selectedResultIndex!]);
               return KeyEventResult.handled;
             }
           }
