@@ -53,12 +53,14 @@ class LinkedListNoteHandler extends NoteTypeHandler {
     required Function(String) onTagTap,
     required VoidCallback onRefresh,
     double baseFontSize = 16.0,
+    Set<String> existingNoteTitles = const {},
   }) {
     return _LinkedListNoteViewer(
       note: note,
       onNoteLinkTap: onNoteLinkTap,
       onTagTap: onTagTap,
       baseFontSize: baseFontSize,
+      existingNoteTitles: existingNoteTitles,
     );
   }
 
@@ -107,12 +109,14 @@ class _LinkedListNoteViewer extends StatefulWidget {
   final Function(String) onNoteLinkTap;
   final Function(String) onTagTap;
   final double baseFontSize;
+  final Set<String> existingNoteTitles;
 
   const _LinkedListNoteViewer({
     required this.note,
     required this.onNoteLinkTap,
     required this.onTagTap,
     this.baseFontSize = 16.0,
+    this.existingNoteTitles = const {},
   });
 
   @override
@@ -199,6 +203,7 @@ class _LinkedListNoteViewerState extends State<_LinkedListNoteViewer> {
             onNoteLinkTap: widget.onNoteLinkTap,
             onTagTap: widget.onTagTap,
             baseFontSize: widget.baseFontSize,
+            existingNoteTitles: widget.existingNoteTitles,
           ),
         ),
 

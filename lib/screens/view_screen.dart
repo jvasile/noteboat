@@ -32,12 +32,14 @@ class _ViewScreenState extends State<ViewScreen> {
   bool _isLoading = true;
   String? _error;
   double _baseFontSize = 16.0;
+  Set<String> _existingNoteTitles = {};
 
   @override
   void initState() {
     super.initState();
     _loadNote();
     _loadFontSize();
+    _loadExistingNoteTitles();
   }
 
   Future<void> _loadFontSize() async {
@@ -45,6 +47,15 @@ class _ViewScreenState extends State<ViewScreen> {
     if (mounted) {
       setState(() {
         _baseFontSize = config.baseFontSize;
+      });
+    }
+  }
+
+  Future<void> _loadExistingNoteTitles() async {
+    final notes = await widget.noteService.getAllNotes();
+    if (mounted) {
+      setState(() {
+        _existingNoteTitles = notes.map((note) => note.title).toSet();
       });
     }
   }
@@ -132,9 +143,31 @@ class _ViewScreenState extends State<ViewScreen> {
     if (!mounted) return;
 
     if (notes.isEmpty) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Note not found: $title')),
+      // Note doesn't exist - create it and open in editor
+      final newNote = await widget.noteService.createNote(
+        title: title,
+        text: '# $title\n\n',
+        types: ['note'],
       );
+
+      if (mounted) {
+        await Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (context) => NoteTypeRegistry.instance
+                .getHandler(newNote.types)
+                .buildEditor(
+                  context: context,
+                  note: newNote,
+                  noteService: widget.noteService,
+                  onComplete: (saved) => Navigator.pop(context, saved),
+                ),
+          ),
+        );
+
+        // Reload note titles after creating a new note
+        _loadExistingNoteTitles();
+      }
     } else if (notes.length == 1) {
       // Only one note with this title - navigate to it
       Navigator.push(
@@ -589,6 +622,7 @@ class _ViewScreenState extends State<ViewScreen> {
                               onTagTap: _navigateToTagList,
                               onRefresh: _loadNote,
                               baseFontSize: _baseFontSize,
+                              existingNoteTitles: _existingNoteTitles,
                             ),
 
                         const SizedBox(height: 24),

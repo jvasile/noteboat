@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown/markdown.dart' as md;
 import '../utils/markdown_link_helper.dart';
 
 /// A widget that renders markdown content with automatic CamelCase and URL linking
@@ -10,6 +12,7 @@ class NoteMarkdownViewer extends StatelessWidget {
   final Function(String tag)? onTagTap;
   final bool selectable;
   final double baseFontSize;
+  final Set<String> existingNoteTitles;
 
   const NoteMarkdownViewer({
     super.key,
@@ -19,6 +22,7 @@ class NoteMarkdownViewer extends StatelessWidget {
     this.onTagTap,
     this.selectable = true,
     this.baseFontSize = 16.0,
+    this.existingNoteTitles = const {},
   });
 
   String _processText(String text, String noteTitle) {
@@ -120,30 +124,86 @@ class NoteMarkdownViewer extends StatelessWidget {
       data: MarkdownLinkHelper.makeLinksClickable(processedText, noteTitle),
       selectable: selectable,
       styleSheet: styleSheet,
-      onTapLink: (linkText, href, linkTitle) async {
-        if (href != null) {
-          // Check if it's a web URL
-          if (href.startsWith('http://') || href.startsWith('https://')) {
-            final success = await MarkdownLinkHelper.openUrl(href);
-            if (!success && context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Could not open URL: $href')),
-              );
-            }
-          } else if (href.startsWith('#')) {
-            // It's a hashtag link
-            final tag = href.substring(1); // Remove the # prefix
-            if (onTagTap != null) {
-              onTagTap!(tag);
-            }
-          } else {
-            // It's a note link
-            if (onNoteLinkTap != null) {
-              onNoteLinkTap!(href);
-            }
-          }
-        }
+      builders: {
+        'a': NoteLinkBuilder(
+          existingNoteTitles: existingNoteTitles,
+          baseFontSize: baseFontSize,
+          onNoteLinkTap: onNoteLinkTap,
+          onTagTap: onTagTap,
+        ),
       },
+    );
+  }
+}
+
+/// Custom link builder that styles links based on whether the target note exists
+class NoteLinkBuilder extends MarkdownElementBuilder {
+  final Set<String> existingNoteTitles;
+  final double baseFontSize;
+  final Function(String)? onNoteLinkTap;
+  final Function(String)? onTagTap;
+
+  NoteLinkBuilder({
+    required this.existingNoteTitles,
+    required this.baseFontSize,
+    this.onNoteLinkTap,
+    this.onTagTap,
+  });
+
+  @override
+  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
+    final String href = element.attributes['href'] ?? '';
+    final String text = element.textContent;
+
+    // Determine if this is a URL, hashtag, or note link
+    bool isUrl = href.startsWith('http://') || href.startsWith('https://');
+    bool isHashtag = href.startsWith('#');
+
+    Color linkColor;
+    void Function()? onTap;
+
+    if (isUrl) {
+      // External URL - blue
+      linkColor = Colors.blue;
+      onTap = () async {
+        await MarkdownLinkHelper.openUrl(href);
+      };
+    } else if (isHashtag) {
+      // Hashtag - blue
+      linkColor = Colors.blue;
+      onTap = () {
+        final tag = href.substring(1);
+        onTagTap?.call(tag);
+      };
+    } else {
+      // Note link - URL decode it first (markdown renderer encodes spaces as %20)
+      String decodedHref;
+      try {
+        decodedHref = Uri.decodeComponent(href);
+      } catch (e) {
+        // If decoding fails, use original
+        decodedHref = href;
+      }
+
+      // Extract the actual note title (strip query params)
+      final cleanHref = decodedHref.split('?').first;
+      final noteExists = existingNoteTitles.contains(cleanHref);
+
+      linkColor = noteExists ? Colors.blue : Colors.red;
+      onTap = () {
+        onNoteLinkTap?.call(decodedHref);
+      };
+    }
+
+    return RichText(
+      text: TextSpan(
+        text: text,
+        style: (preferredStyle ?? TextStyle(fontSize: baseFontSize)).copyWith(
+          color: linkColor,
+          decoration: TextDecoration.underline,
+        ),
+        recognizer: TapGestureRecognizer()..onTap = onTap,
+      ),
     );
   }
 }
