@@ -291,21 +291,6 @@ class _ViewScreenState extends State<ViewScreen> {
                       ],
                       const SizedBox(height: 16),
 
-                      // Tags
-                      if (_note!.tags.isNotEmpty) ...[
-                        Wrap(
-                          spacing: 8,
-                          runSpacing: 8,
-                          children: _note!.tags.map((tag) {
-                            return ActionChip(
-                              label: Text('#$tag'),
-                              onPressed: () => _navigateToTagList(tag),
-                            );
-                          }).toList(),
-                        ),
-                        const SizedBox(height: 16),
-                      ],
-
                       const Divider(),
                       const SizedBox(height: 16),
 
