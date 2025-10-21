@@ -141,6 +141,8 @@ class _EditScreenState extends State<EditScreen> {
   Widget _buildEditor() {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
+      primary: false,
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.manual,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -201,6 +203,8 @@ class _EditScreenState extends State<EditScreen> {
             maxLines: null,
             minLines: 15,
             keyboardType: TextInputType.multiline,
+            enableInteractiveSelection: true,
+            textInputAction: TextInputAction.newline,
           ),
         ],
       ),
