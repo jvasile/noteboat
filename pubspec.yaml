@@ -35,6 +35,21 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
 
+  # For YAML frontmatter parsing
+  yaml: ^3.1.2
+
+  # For file path operations
+  path: ^1.9.0
+
+  # For accessing standard directories
+  path_provider: ^2.1.4
+
+  # For UUID generation
+  uuid: ^4.5.1
+
+  # For markdown rendering
+  flutter_markdown: ^0.7.4+1
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
