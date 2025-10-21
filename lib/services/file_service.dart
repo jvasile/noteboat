@@ -34,7 +34,15 @@ class FileService {
       }
 
       // Parse YAML frontmatter (skip first empty part)
-      final yamlContent = parts[1].trim();
+      var yamlContent = parts[1].trim();
+
+      // Fix common YAML issues: empty field values without quotes
+      // Replace lines like "author: " or "author:" with "author: ''"
+      yamlContent = yamlContent.replaceAllMapped(
+        RegExp(r'^(\s*\w+):\s*$', multiLine: true),
+        (match) => '${match.group(1)}: ""',
+      );
+
       final yaml = loadYaml(yamlContent);
       final frontmatter = Map<String, dynamic>.from(yaml);
 
@@ -64,8 +72,13 @@ class FileService {
       final yamlLines = <String>[];
 
       for (final entry in frontmatter.entries) {
-        final key = entry.key;
+        var key = entry.key;
         final value = entry.value;
+
+        // Quote keys that start with @ (reserved in YAML)
+        if (key.startsWith('@')) {
+          key = '"$key"';
+        }
 
         if (value is List) {
           if (value.isEmpty) {
