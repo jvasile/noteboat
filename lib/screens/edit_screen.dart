@@ -50,11 +50,11 @@ class _EditScreenState extends State<EditScreen> {
       return;
     }
 
-    // Check if title contains pipe character (reserved for disambiguation)
-    if (title.contains('|')) {
+    // Check if title contains reserved characters (reserved for link parameters)
+    if (title.contains('?')) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('Title cannot contain | character'),
+          content: Text('Title cannot contain ? character'),
         ),
       );
       return;
@@ -168,6 +168,7 @@ class _EditScreenState extends State<EditScreen> {
                   SizedBox(height: 4),
                   Text('• CamelCase words auto-link: MyOtherNote'),
                   Text('• Link titles with spaces: [My Note](My Note)'),
+                  Text('• Disambiguate: [My Note](My Note?id=xxx)'),
                   Text('• Add tags with #hashtag'),
                   Text('• Use # for headings, ** for bold, * for italic'),
                   Text('• Use - or * for bullet lists'),

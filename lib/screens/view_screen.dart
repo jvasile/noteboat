@@ -65,17 +65,26 @@ class _ViewScreenState extends State<ViewScreen> {
   }
 
   void _navigateToNote(String linkText) async {
-    // Parse link text - could be "Title" or "Title|id"
+    // Parse link text - could be "Title" or "Title?id=xxx" or "Title?id=xxx&other=value"
     String title;
-    String? specifiedId;
+    Map<String, String> params = {};
 
-    if (linkText.contains('|')) {
-      final parts = linkText.split('|');
+    if (linkText.contains('?')) {
+      final parts = linkText.split('?');
       title = parts[0];
-      specifiedId = parts.length > 1 ? parts[1] : null;
+      if (parts.length > 1) {
+        // Parse query string parameters
+        try {
+          params = Uri.splitQueryString(parts[1]);
+        } catch (e) {
+          // Invalid query string, ignore parameters
+        }
+      }
     } else {
       title = linkText;
     }
+
+    final specifiedId = params['id'];
 
     // If ID is specified, navigate directly to that note
     if (specifiedId != null) {
@@ -92,7 +101,7 @@ class _ViewScreenState extends State<ViewScreen> {
         );
       } else if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Note not found: $title|$specifiedId')),
+          SnackBar(content: Text('Note not found: $title?id=$specifiedId')),
         );
       }
       return;
