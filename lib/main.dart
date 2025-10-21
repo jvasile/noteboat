@@ -4,10 +4,14 @@ import 'services/config_service.dart';
 import 'services/note_service.dart';
 import 'screens/view_screen.dart';
 import 'screens/edit_screen.dart';
+import 'types/types.dart'; // Import early to ensure type registration
 
 export 'services/config_service.dart' show AppConfig;
 
 void main(List<String> args) async {
+  // Ensure all note types are registered before starting the app
+  ensureTypesRegistered();
+
   // If CLI arguments are provided, run in CLI mode
   if (args.isNotEmpty) {
     await runCLI(args);

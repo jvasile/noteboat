@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
-import '../widgets/note_markdown_viewer.dart';
+import '../types/types.dart';
 import 'edit_screen.dart';
 import 'list_view_screen.dart';
 import 'settings_screen.dart';
@@ -219,10 +219,14 @@ class _ViewScreenState extends State<ViewScreen> {
       final result = await Navigator.push(
         context,
         MaterialPageRoute(
-          builder: (context) => EditScreen(
-            noteService: widget.noteService,
-            note: _note!,
-          ),
+          builder: (context) => NoteTypeRegistry.instance
+              .getHandler(_note!.types)
+              .buildEditor(
+                context: context,
+                note: _note!,
+                noteService: widget.noteService,
+                onComplete: (saved) => Navigator.pop(context, saved),
+              ),
         ),
       );
 
@@ -233,6 +237,10 @@ class _ViewScreenState extends State<ViewScreen> {
   }
 
   void _handleAddNoteShortcut() async {
+    await _handleAddNoteWithType('note');
+  }
+
+  Future<void> _handleAddNoteWithType(String noteType) async {
     final result = await _showCreateNoteDialog();
     if (result != null && result.isNotEmpty) {
       // Check if note(s) with this title already exist
@@ -262,10 +270,11 @@ class _ViewScreenState extends State<ViewScreen> {
           }
         }
       } else {
-        // Note doesn't exist - create it
+        // Note doesn't exist - create it with specified type
         final newNote = await widget.noteService.createNote(
           title: result,
           text: '# $result\n\nStart writing here...',
+          types: [noteType],
         );
 
         if (mounted) {
@@ -282,6 +291,19 @@ class _ViewScreenState extends State<ViewScreen> {
           );
         }
       }
+    }
+  }
+
+  Future<void> _showNoteTypeSelector() async {
+    final types = NoteTypeRegistry.instance.getRegisteredTypes();
+
+    final selected = await showDialog<String>(
+      context: context,
+      builder: (context) => _NoteTypeSelectorDialog(types: types),
+    );
+
+    if (selected != null) {
+      await _handleAddNoteWithType(selected);
     }
   }
 
@@ -324,10 +346,14 @@ class _ViewScreenState extends State<ViewScreen> {
                     Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) => EditScreen(
-                          noteService: widget.noteService,
-                          note: note,
-                        ),
+                        builder: (context) => NoteTypeRegistry.instance
+                            .getHandler(note.types)
+                            .buildEditor(
+                              context: context,
+                              note: note,
+                              noteService: widget.noteService,
+                              onComplete: (saved) => Navigator.pop(context, saved),
+                            ),
                       ),
                     ).then((result) {
                       if (result == true) {
@@ -380,14 +406,27 @@ class _ViewScreenState extends State<ViewScreen> {
       autofocus: true,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
+          // First, let the note type handler handle the event
+          if (_note != null) {
+            final handler = NoteTypeRegistry.instance.getHandler(_note!.types);
+            final result = handler.handleKeyEvent(
+              note: _note!,
+              event: event,
+              onNoteLinkTap: _navigateToNote,
+            );
+            if (result == KeyEventResult.handled) {
+              return KeyEventResult.handled;
+            }
+          }
+
           // Handle 'e' key for edit
           if (event.logicalKey == LogicalKeyboardKey.keyE) {
             _handleEditShortcut();
             return KeyEventResult.handled;
           }
-          // Handle '+' key for add note
+          // Handle '+' key for add note - show type selector
           if (event.character == '+' || event.logicalKey == LogicalKeyboardKey.add) {
-            _handleAddNoteShortcut();
+            _showNoteTypeSelector();
             return KeyEventResult.handled;
           }
         }
@@ -464,13 +503,17 @@ class _ViewScreenState extends State<ViewScreen> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Markdown content
-                        NoteMarkdownViewer(
-                          text: _note!.text,
-                          noteTitle: _note!.title,
-                          onNoteLinkTap: _navigateToNote,
-                          onTagTap: _navigateToTagList,
-                        ),
+                        // Type-specific note viewer
+                        NoteTypeRegistry.instance
+                            .getHandler(_note!.types)
+                            .buildViewer(
+                              context: context,
+                              note: _note!,
+                              noteService: widget.noteService,
+                              onNoteLinkTap: _navigateToNote,
+                              onTagTap: _navigateToTagList,
+                              onRefresh: _loadNote,
+                            ),
 
                         const SizedBox(height: 24),
                         const Divider(),
@@ -496,10 +539,13 @@ class _ViewScreenState extends State<ViewScreen> {
                       ],
                     ),
                   ),
-        floatingActionButton: FloatingActionButton(
-          onPressed: _handleAddNoteShortcut,
-          tooltip: 'Add Note',
-          child: const Icon(Icons.add),
+        floatingActionButton: GestureDetector(
+          onLongPress: _showNoteTypeSelector,
+          child: FloatingActionButton(
+            onPressed: _handleAddNoteShortcut,
+            tooltip: 'Add Note (long press for type selection)',
+            child: const Icon(Icons.add),
+          ),
         ),
       ),
     );
@@ -508,5 +554,84 @@ class _ViewScreenState extends State<ViewScreen> {
   String _formatDateTime(DateTime date) {
     return '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')} '
         '${date.hour.toString().padLeft(2, '0')}:${date.minute.toString().padLeft(2, '0')}';
+  }
+}
+
+/// Keyboard-navigable note type selector dialog
+class _NoteTypeSelectorDialog extends StatefulWidget {
+  final List<String> types;
+
+  const _NoteTypeSelectorDialog({required this.types});
+
+  @override
+  State<_NoteTypeSelectorDialog> createState() => _NoteTypeSelectorDialogState();
+}
+
+class _NoteTypeSelectorDialogState extends State<_NoteTypeSelectorDialog> {
+  int _selectedIndex = 0;
+
+  void _selectType() {
+    Navigator.pop(context, widget.types[_selectedIndex]);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+            setState(() {
+              _selectedIndex = (_selectedIndex + 1) % widget.types.length;
+            });
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+            setState(() {
+              _selectedIndex = (_selectedIndex - 1 + widget.types.length) % widget.types.length;
+            });
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.enter) {
+            _selectType();
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.pop(context);
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: AlertDialog(
+        title: const Text('Select Note Type'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: List.generate(widget.types.length, (index) {
+            final type = widget.types[index];
+            final isSelected = index == _selectedIndex;
+            return Container(
+              color: isSelected ? Theme.of(context).colorScheme.primaryContainer : null,
+              child: ListTile(
+                title: Text(
+                  NoteTypeRegistry.instance.getTypeName(type),
+                  style: TextStyle(
+                    color: isSelected ? Theme.of(context).colorScheme.onPrimaryContainer : null,
+                  ),
+                ),
+                onTap: () => Navigator.pop(context, type),
+                selected: isSelected,
+              ),
+            );
+          }),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+        ],
+      ),
+    );
   }
 }
