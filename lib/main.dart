@@ -4,6 +4,7 @@ import 'services/config_service.dart';
 import 'services/note_service.dart';
 import 'screens/view_screen.dart';
 import 'screens/edit_screen.dart';
+import 'screens/list_view_screen.dart';
 import 'types/types.dart'; // Import early to ensure type registration
 
 export 'services/config_service.dart' show AppConfig;
@@ -219,7 +220,6 @@ class NoteboatHome extends StatefulWidget {
 class _NoteboatHomeState extends State<NoteboatHome> {
   late NoteService _noteService;
   bool _isInitializing = true;
-  bool _mainNoteExists = false;
 
   @override
   void initState() {
@@ -238,31 +238,23 @@ class _NoteboatHomeState extends State<NoteboatHome> {
       // Load all notes
       await _noteService.initialize();
 
-      // Ensure Main note exists
-      await _noteService.ensureMainNote();
-
-      // Check if Main note exists
-      final mainNote = await _noteService.getNoteByTitle('Main');
-      _mainNoteExists = mainNote != null;
+      // Ensure Help note exists
+      await _noteService.ensureHelpNote();
 
       setState(() => _isInitializing = false);
 
-      // Navigate to appropriate screen
+      // Navigate to list view (search screen)
       if (mounted) {
-        if (mainNote != null) {
-          // Show Main note
-          Navigator.pushReplacement(
-            context,
-            MaterialPageRoute(
-              builder: (context) => ViewScreen(
-                noteService: _noteService,
-                noteId: mainNote.id,
-                onThemeChanged: widget.onThemeChanged,
-                currentThemeMode: widget.currentThemeMode,
-              ),
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => ListViewScreen(
+              noteService: _noteService,
+              onThemeChanged: widget.onThemeChanged,
+              currentThemeMode: widget.currentThemeMode,
             ),
-          );
-        }
+          ),
+        );
       }
     } catch (e) {
       setState(() => _isInitializing = false);

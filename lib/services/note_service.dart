@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import '../models/note.dart';
@@ -268,27 +269,19 @@ class NoteService {
     return notes != null && notes.isNotEmpty;
   }
 
-  // Ensure "Main" note exists
-  Future<void> ensureMainNote() async {
-    if (!await noteExists('Main')) {
-      await createNote(
-        title: 'Main',
-        text: '''# Welcome to Noteboat!
+  // Ensure "Help" note exists by copying from bundled asset
+  Future<void> ensureHelpNote() async {
+    if (!await noteExists('Help')) {
+      // Load bundled Help.md file
+      final helpContent = await rootBundle.loadString('assets/Help.md');
 
-This is your main note. You can edit it by clicking the Edit button.
+      // Write directly to notes directory
+      final writeDir = await configService.getWriteDirectory();
+      final helpPath = path.join(writeDir, 'Help.md');
+      await File(helpPath).writeAsString(helpContent);
 
-## Features
-
-- Create linked notes using CamelCase words like ThisIsALink
-- Add tags using #hashtags
-- Browse and search all your notes
-- Notes are stored as markdown files with YAML frontmatter
-
-## Getting Started
-
-Click the Edit button to modify this note, or use the List button to see all notes.
-''',
-      );
+      // Reload notes to include the new Help.md
+      await reload();
     }
   }
 

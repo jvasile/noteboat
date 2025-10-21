@@ -429,6 +429,20 @@ class _ViewScreenState extends State<ViewScreen> {
             _showNoteTypeSelector();
             return KeyEventResult.handled;
           }
+          // Handle '/' key to switch to All Notes (search) screen
+          if (event.character == '/') {
+            Navigator.pushReplacement(
+              context,
+              MaterialPageRoute(
+                builder: (context) => ListViewScreen(
+                  noteService: widget.noteService,
+                  onThemeChanged: widget.onThemeChanged,
+                  currentThemeMode: widget.currentThemeMode,
+                ),
+              ),
+            );
+            return KeyEventResult.handled;
+          }
         }
         return KeyEventResult.ignored;
       },

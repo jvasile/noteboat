@@ -30,6 +30,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
   bool _isLoading = true;
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
+  final FocusNode _searchFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -39,11 +40,16 @@ class _ListViewScreenState extends State<ListViewScreen> {
       _searchController.text = widget.initialSearchQuery!;
     }
     _loadNotes();
+    // Request focus on search field after first frame
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _searchFocusNode.requestFocus();
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _searchFocusNode.dispose();
     super.dispose();
   }
 
@@ -222,7 +228,6 @@ class _ListViewScreenState extends State<ListViewScreen> {
   @override
   Widget build(BuildContext context) {
     return Focus(
-      autofocus: true,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
           // Handle '+' key for add note - show type selector
@@ -261,6 +266,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
             padding: const EdgeInsets.all(8.0),
             child: TextField(
               controller: _searchController,
+              focusNode: _searchFocusNode,
               decoration: InputDecoration(
                 hintText: 'Search notes...',
                 prefixIcon: const Icon(Icons.search),
@@ -277,7 +283,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                   borderRadius: BorderRadius.circular(8),
                 ),
                 filled: true,
-                fillColor: Colors.white,
+                fillColor: Theme.of(context).colorScheme.surface,
               ),
               onChanged: _filterNotes,
             ),
