@@ -120,13 +120,13 @@ class NoteMarkdownViewer extends StatelessWidget {
       tableBody: baseStyleSheet.tableBody?.copyWith(fontSize: baseFontSize),
     );
 
-    return MarkdownBody(
+    final markdownBody = MarkdownBody(
       data: MarkdownLinkHelper.makeLinksClickable(
         processedText,
         noteTitle,
         existingNoteTitles: existingNoteTitles,
       ),
-      selectable: selectable,
+      selectable: false,  // Let SelectionArea handle selection instead
       styleSheet: styleSheet,
       builders: {
         'a': NoteLinkBuilder(
@@ -134,9 +134,17 @@ class NoteMarkdownViewer extends StatelessWidget {
           baseFontSize: baseFontSize,
           onNoteLinkTap: onNoteLinkTap,
           onTagTap: onTagTap,
+          selectable: selectable,
         ),
       },
     );
+
+    // Wrap in SelectionArea to enable continuous multi-line selection
+    if (selectable) {
+      return SelectionArea(child: markdownBody);
+    } else {
+      return markdownBody;
+    }
   }
 }
 
@@ -146,12 +154,14 @@ class NoteLinkBuilder extends MarkdownElementBuilder {
   final double baseFontSize;
   final Function(String)? onNoteLinkTap;
   final Function(String)? onTagTap;
+  final bool selectable;
 
   NoteLinkBuilder({
     required this.existingNoteTitles,
     required this.baseFontSize,
     this.onNoteLinkTap,
     this.onTagTap,
+    this.selectable = true,
   });
 
   @override
@@ -199,13 +209,16 @@ class NoteLinkBuilder extends MarkdownElementBuilder {
       };
     }
 
+    final textStyle = (preferredStyle ?? TextStyle(fontSize: baseFontSize)).copyWith(
+      color: linkColor,
+      decoration: TextDecoration.underline,
+    );
+
+    // Always use RichText - SelectionArea will handle text selection
     return RichText(
       text: TextSpan(
         text: text,
-        style: (preferredStyle ?? TextStyle(fontSize: baseFontSize)).copyWith(
-          color: linkColor,
-          decoration: TextDecoration.underline,
-        ),
+        style: textStyle,
         recognizer: TapGestureRecognizer()..onTap = onTap,
       ),
     );
