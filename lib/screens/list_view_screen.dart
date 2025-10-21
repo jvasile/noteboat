@@ -31,6 +31,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
   String _searchQuery = '';
   final TextEditingController _searchController = TextEditingController();
   final FocusNode _searchFocusNode = FocusNode();
+  final FocusNode _bodyFocusNode = FocusNode();
 
   @override
   void initState() {
@@ -44,12 +45,19 @@ class _ListViewScreenState extends State<ListViewScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _searchFocusNode.requestFocus();
     });
+    // When search loses focus, focus the body so '/' key works
+    _searchFocusNode.addListener(() {
+      if (!_searchFocusNode.hasFocus && mounted) {
+        _bodyFocusNode.requestFocus();
+      }
+    });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
     _searchFocusNode.dispose();
+    _bodyFocusNode.dispose();
     super.dispose();
   }
 
@@ -290,7 +298,26 @@ class _ListViewScreenState extends State<ListViewScreen> {
           ),
         ),
       ),
-      body: _isLoading
+      body: Focus(
+        focusNode: _bodyFocusNode,
+        autofocus: false,
+        onKeyEvent: (node, event) {
+          if (event is KeyDownEvent) {
+            // Handle '/' key to focus search bar when body is focused
+            if (event.character == '/' && !_searchFocusNode.hasFocus) {
+              _searchFocusNode.requestFocus();
+              return KeyEventResult.handled;
+            }
+          }
+          return KeyEventResult.ignored;
+        },
+        child: GestureDetector(
+          onTap: () {
+            // Request focus on body when tapped (e.g., on empty space)
+            _bodyFocusNode.requestFocus();
+          },
+          behavior: HitTestBehavior.translucent,
+          child: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _filteredNotes.isEmpty
               ? Center(
@@ -370,6 +397,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
                     },
                   ),
                 ),
+        ),
+      ),
       floatingActionButton: GestureDetector(
         onLongPress: _showNoteTypeSelector,
         child: FloatingActionButton(

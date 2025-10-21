@@ -71,20 +71,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
     final result = await showDialog<bool>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Discard Changes?'),
-        content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context, false),
-            child: const Text('Cancel'),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, true),
-            child: const Text('Discard'),
-          ),
-        ],
-      ),
+      builder: (context) => const _DiscardChangesDialog(),
     );
 
     return result ?? false;
@@ -320,6 +307,79 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ],
               ),
             ),
+      ),
+    );
+  }
+}
+
+/// Keyboard-navigable discard changes confirmation dialog
+class _DiscardChangesDialog extends StatefulWidget {
+  const _DiscardChangesDialog();
+
+  @override
+  State<_DiscardChangesDialog> createState() => _DiscardChangesDialogState();
+}
+
+class _DiscardChangesDialogState extends State<_DiscardChangesDialog> {
+  int _selectedIndex = 0; // 0 = Cancel, 1 = Discard
+
+  void _selectOption() {
+    Navigator.pop(context, _selectedIndex == 1);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Focus(
+      autofocus: true,
+      onKeyEvent: (node, event) {
+        if (event is KeyDownEvent) {
+          if (event.logicalKey == LogicalKeyboardKey.arrowLeft ||
+              event.logicalKey == LogicalKeyboardKey.arrowRight) {
+            setState(() {
+              _selectedIndex = (_selectedIndex + 1) % 2;
+            });
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.enter) {
+            _selectOption();
+            return KeyEventResult.handled;
+          }
+          if (event.logicalKey == LogicalKeyboardKey.escape) {
+            Navigator.pop(context, false);
+            return KeyEventResult.handled;
+          }
+        }
+        return KeyEventResult.ignored;
+      },
+      child: AlertDialog(
+        title: const Text('Discard Changes?'),
+        content: const Text('You have unsaved changes. Are you sure you want to discard them?'),
+        actions: [
+          FilledButton(
+            onPressed: () => Navigator.pop(context, false),
+            style: FilledButton.styleFrom(
+              backgroundColor: _selectedIndex == 0
+                  ? Theme.of(context).colorScheme.primary
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+              foregroundColor: _selectedIndex == 0
+                  ? Theme.of(context).colorScheme.onPrimary
+                  : Theme.of(context).colorScheme.onSurface,
+            ),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            style: FilledButton.styleFrom(
+              backgroundColor: _selectedIndex == 1
+                  ? Theme.of(context).colorScheme.error
+                  : Theme.of(context).colorScheme.surfaceContainerHighest,
+              foregroundColor: _selectedIndex == 1
+                  ? Theme.of(context).colorScheme.onError
+                  : Theme.of(context).colorScheme.onSurface,
+            ),
+            child: const Text('Discard'),
+          ),
+        ],
       ),
     );
   }
