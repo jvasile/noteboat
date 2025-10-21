@@ -37,12 +37,18 @@ theme mode changes.
 
 ### Keyboard Shortcuts
 
+Keyboard shortcuts are configurable via Settings. The system uses:
+- `HotkeyConfig` class in `config_service.dart` defines all configurable shortcuts
+- `HotkeyHelper.matches()` in `lib/utils/hotkey_helper.dart` checks if a KeyEvent matches a hotkey definition
+- Hotkey format supports comma-separated alternatives: "Escape,Alt+ArrowLeft"
+- Screens load hotkeys from ConfigService on init and use HotkeyHelper for matching
+
 All screens with keyboard shortcuts wrap their Scaffold in a Focus widget with
 `onKeyEvent` handler. Use `HardwareKeyboard.instance.isControlPressed` to check
 modifiers (not `event.isControlPressed`).
 
-Plus key detection: Check `event.character == '+'` OR `event.logicalKey == LogicalKeyboardKey.add`
-to support both Shift+= and numpad +.
+Fixed (non-configurable) shortcuts like Ctrl+S, Ctrl+P, Tab, and Enter are
+checked directly using logical key comparisons.
 
 ### Unsaved Changes Confirmation
 
@@ -75,10 +81,13 @@ Avoid hardcoded colors like `Colors.blue.shade50`.
 - `lib/utils/markdown_link_helper.dart` - Convert patterns to markdown links
   - Uses xdg-open on Linux for URL opening to avoid GTK warnings
 - `lib/utils/link_extractor.dart` - Extract links and tags from text
+- `lib/utils/hotkey_helper.dart` - Keyboard shortcut matching utilities
 
 ### Services
 - `lib/services/note_service.dart` - Note CRUD with dual caching, handles title changes
-- `lib/services/config_service.dart` - App configuration and theme persistence
+- `lib/services/config_service.dart` - App configuration, theme, and hotkey persistence
+  - `HotkeyConfig` class defines configurable keyboard shortcuts
+  - `AppConfig` class includes hotkeys field
 
 ### Models
 - `lib/models/note.dart` - Note data model with YAML frontmatter serialization

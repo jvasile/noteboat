@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
+import '../services/config_service.dart';
+import '../utils/hotkey_helper.dart';
 import '../widgets/note_markdown_viewer.dart';
 
 class EditScreen extends StatefulWidget {
@@ -25,6 +27,7 @@ class _EditScreenState extends State<EditScreen> {
   bool _isPreview = false;
   bool _isSaving = false;
   String _originalTitle = '';
+  HotkeyConfig _hotkeys = const HotkeyConfig();
 
   @override
   void initState() {
@@ -32,11 +35,21 @@ class _EditScreenState extends State<EditScreen> {
     _originalTitle = widget.note.title;
     _titleController = TextEditingController(text: widget.note.title);
     _textController = TextEditingController(text: widget.note.text);
+    _loadHotkeys();
     // Request focus on text field after first frame and position cursor at beginning
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _textFocusNode.requestFocus();
       _textController.selection = const TextSelection.collapsed(offset: 0);
     });
+  }
+
+  Future<void> _loadHotkeys() async {
+    final config = await widget.noteService.configService.loadConfig();
+    if (mounted) {
+      setState(() {
+        _hotkeys = config.hotkeys;
+      });
+    }
   }
 
   @override
@@ -153,8 +166,8 @@ class _EditScreenState extends State<EditScreen> {
             return KeyEventResult.handled;
           }
 
-          // Handle Escape to close
-          if (event.logicalKey == LogicalKeyboardKey.escape) {
+          // Handle navigate back hotkey to close
+          if (HotkeyHelper.matches(event, _hotkeys.navigateBack)) {
             _handleClose();
             return KeyEventResult.handled;
           }
@@ -362,7 +375,7 @@ class _DiscardChangesDialogState extends State<_DiscardChangesDialog> {
             _selectOption();
             return KeyEventResult.handled;
           }
-          if (event.logicalKey == LogicalKeyboardKey.escape) {
+          if (HotkeyHelper.matches(event, const HotkeyConfig().closeDialog)) {
             Navigator.pop(context, false);
             return KeyEventResult.handled;
           }

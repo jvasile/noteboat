@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
+import '../services/config_service.dart';
 import '../types/types.dart';
+import '../utils/hotkey_helper.dart';
 import 'edit_screen.dart';
 import 'list_view_screen.dart';
 import 'settings_screen.dart';
@@ -33,20 +35,22 @@ class _ViewScreenState extends State<ViewScreen> {
   String? _error;
   double _baseFontSize = 16.0;
   Set<String> _existingNoteTitles = {};
+  HotkeyConfig _hotkeys = const HotkeyConfig();
 
   @override
   void initState() {
     super.initState();
     _loadNote();
-    _loadFontSize();
+    _loadConfig();
     _loadExistingNoteTitles();
   }
 
-  Future<void> _loadFontSize() async {
+  Future<void> _loadConfig() async {
     final config = await widget.noteService.configService.loadConfig();
     if (mounted) {
       setState(() {
         _baseFontSize = config.baseFontSize;
+        _hotkeys = config.hotkeys;
       });
     }
   }
@@ -481,10 +485,8 @@ class _ViewScreenState extends State<ViewScreen> {
       autofocus: true,
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
-          // Handle Escape or Alt+Left to go back
-          if (event.logicalKey == LogicalKeyboardKey.escape ||
-              (event.logicalKey == LogicalKeyboardKey.arrowLeft &&
-                  HardwareKeyboard.instance.isAltPressed)) {
+          // Handle navigate back hotkey
+          if (HotkeyHelper.matches(event, _hotkeys.navigateBack)) {
             Navigator.pop(context);
             return KeyEventResult.handled;
           }

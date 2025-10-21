@@ -39,26 +39,20 @@ The app starts in the All Notes (search) view. Press `/` to focus the search bar
 
 ## Hot Keys
 
-### Global
- * `/` - Focus search bar / switch to All Notes view
- * `+` - Create new note (shows type selector)
- * `Escape` - Close dialogs, cancel edits, go back
+Keyboard shortcuts are configurable in Settings. Check your Settings to see what hotkeys do what, or to customize them to your preference.
 
-### Viewing Notes
- * `e` - Edit current note
- * `Delete` - Delete current note (with confirmation)
- * `Escape` or `Alt+Left` - Go back to previous screen
+Default shortcuts include:
+ * **New Note**: `+`
+ * **Search**: `/`
+ * **Edit Note**: `e`
+ * **Navigate Back**: `Escape` or `Alt+Left Arrow`
+ * **Move Up/Down**: Arrow keys or `k`/`j`
+ * **Close Dialog**: `Escape`
 
-### Editing Notes
- * `Ctrl+P` - Toggle preview
- * `Ctrl+S` - Save changes
- * `Escape` - Close editor (prompts if unsaved changes)
-
-### Linked List Notes
- * `Left Arrow` - Go to previous note
- * `Right Arrow` - Go to next note
-
-### Dialogs
- * `Arrow Keys` - Navigate between options
- * `Enter` - Confirm/select highlighted option
- * `Escape` - Cancel
+Fixed (non-configurable) shortcuts:
+ * `Ctrl+P` - Toggle preview (Edit mode)
+ * `Ctrl+S` - Save changes (Edit/Settings mode)
+ * `Tab` - Navigate between UI elements
+ * `Enter` - Confirm/select
+ * `Delete` - Delete current note (View mode)
+ * `Left/Right Arrow` - Navigate linked list notes (if applicable)

@@ -20,6 +20,14 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _editorController;
+  late TextEditingController _newNoteController;
+  late TextEditingController _searchController;
+  late TextEditingController _editNoteController;
+  late TextEditingController _viewModeController;
+  late TextEditingController _navigateBackController;
+  late TextEditingController _moveUpController;
+  late TextEditingController _moveDownController;
+  late TextEditingController _closeDialogController;
   AppConfig? _config;
   bool _isLoading = true;
   bool _isSaving = false;
@@ -30,6 +38,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   void initState() {
     super.initState();
     _editorController = TextEditingController();
+    _newNoteController = TextEditingController();
+    _searchController = TextEditingController();
+    _editNoteController = TextEditingController();
+    _viewModeController = TextEditingController();
+    _navigateBackController = TextEditingController();
+    _moveUpController = TextEditingController();
+    _moveDownController = TextEditingController();
+    _closeDialogController = TextEditingController();
     _selectedThemeMode = widget.currentThemeMode ?? ThemeMode.system;
     _loadConfig();
   }
@@ -37,6 +53,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   void dispose() {
     _editorController.dispose();
+    _newNoteController.dispose();
+    _searchController.dispose();
+    _editNoteController.dispose();
+    _viewModeController.dispose();
+    _navigateBackController.dispose();
+    _moveUpController.dispose();
+    _moveDownController.dispose();
+    _closeDialogController.dispose();
     super.dispose();
   }
 
@@ -49,6 +73,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _config = config;
       _editorController.text = config.defaultEditor;
       _baseFontSize = config.baseFontSize;
+      _newNoteController.text = config.hotkeys.newNote;
+      _searchController.text = config.hotkeys.search;
+      _editNoteController.text = config.hotkeys.editNote;
+      _viewModeController.text = config.hotkeys.viewMode;
+      _navigateBackController.text = config.hotkeys.navigateBack;
+      _moveUpController.text = config.hotkeys.moveUp;
+      _moveDownController.text = config.hotkeys.moveDown;
+      _closeDialogController.text = config.hotkeys.closeDialog;
       _isLoading = false;
     });
   }
@@ -66,7 +98,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Check if font size changed
     final fontSizeChanged = _baseFontSize != _config!.baseFontSize;
 
-    return editorChanged || themeChanged || fontSizeChanged;
+    // Check if hotkeys changed
+    final hotkeysChanged =
+      _newNoteController.text != _config!.hotkeys.newNote ||
+      _searchController.text != _config!.hotkeys.search ||
+      _editNoteController.text != _config!.hotkeys.editNote ||
+      _viewModeController.text != _config!.hotkeys.viewMode ||
+      _navigateBackController.text != _config!.hotkeys.navigateBack ||
+      _moveUpController.text != _config!.hotkeys.moveUp ||
+      _moveDownController.text != _config!.hotkeys.moveDown ||
+      _closeDialogController.text != _config!.hotkeys.closeDialog;
+
+    return editorChanged || themeChanged || fontSizeChanged || hotkeysChanged;
   }
 
   Future<bool> _confirmDiscard() async {
@@ -101,6 +144,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
         defaultEditor: _editorController.text.trim(),
         themeMode: _config!.themeMode,
         baseFontSize: _baseFontSize,
+        hotkeys: HotkeyConfig(
+          newNote: _newNoteController.text,
+          search: _searchController.text,
+          editNote: _editNoteController.text,
+          viewMode: _viewModeController.text,
+          navigateBack: _navigateBackController.text,
+          moveUp: _moveUpController.text,
+          moveDown: _moveDownController.text,
+          closeDialog: _closeDialogController.text,
+        ),
       );
 
       await widget.configService.saveConfig(updatedConfig);
@@ -301,6 +354,92 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           color: Theme.of(context).colorScheme.onSurface,
                         ),
                       ),
+                    ),
+                  ),
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 16),
+
+                  // Hotkey settings
+                  Text(
+                    'Keyboard Shortcuts',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Customize keyboard shortcuts. Use comma-separated values for multiple keys (e.g., "Escape,Alt+ArrowLeft")',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: _newNoteController,
+                    decoration: const InputDecoration(
+                      labelText: 'New Note',
+                      border: OutlineInputBorder(),
+                      helperText: 'Create a new note',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _searchController,
+                    decoration: const InputDecoration(
+                      labelText: 'Search',
+                      border: OutlineInputBorder(),
+                      helperText: 'Focus search field',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _editNoteController,
+                    decoration: const InputDecoration(
+                      labelText: 'Edit Note',
+                      border: OutlineInputBorder(),
+                      helperText: 'Edit selected note',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _viewModeController,
+                    decoration: const InputDecoration(
+                      labelText: 'View Mode',
+                      border: OutlineInputBorder(),
+                      helperText: 'Switch to view mode',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _navigateBackController,
+                    decoration: const InputDecoration(
+                      labelText: 'Navigate Back',
+                      border: OutlineInputBorder(),
+                      helperText: 'Go back to previous screen',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _moveUpController,
+                    decoration: const InputDecoration(
+                      labelText: 'Move Up',
+                      border: OutlineInputBorder(),
+                      helperText: 'Move selection up in lists',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _moveDownController,
+                    decoration: const InputDecoration(
+                      labelText: 'Move Down',
+                      border: OutlineInputBorder(),
+                      helperText: 'Move selection down in lists',
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _closeDialogController,
+                    decoration: const InputDecoration(
+                      labelText: 'Close Dialog',
+                      border: OutlineInputBorder(),
+                      helperText: 'Close dialogs and popups',
                     ),
                   ),
                   const SizedBox(height: 32),

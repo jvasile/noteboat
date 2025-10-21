@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/note.dart';
 import '../services/note_service.dart';
+import '../services/config_service.dart';
 import '../types/types.dart';
+import '../utils/hotkey_helper.dart';
 import 'view_screen.dart';
 import 'settings_screen.dart';
 
@@ -35,6 +37,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
   int? _selectedResultIndex; // Track selected search result
   final ScrollController _scrollController = ScrollController();
   final Map<int, GlobalKey> _itemKeys = {}; // Keys for each list item
+  HotkeyConfig _hotkeys = const HotkeyConfig();
 
   @override
   void initState() {
@@ -44,16 +47,26 @@ class _ListViewScreenState extends State<ListViewScreen> {
       _searchController.text = widget.initialSearchQuery!;
     }
     _loadNotes();
+    _loadHotkeys();
     // Request focus on search field after first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _searchFocusNode.requestFocus();
     });
-    // When search loses focus, focus the body so '/' key works
+    // When search loses focus, focus the body so search hotkey works
     _searchFocusNode.addListener(() {
       if (!_searchFocusNode.hasFocus && mounted) {
         _bodyFocusNode.requestFocus();
       }
     });
+  }
+
+  Future<void> _loadHotkeys() async {
+    final config = await widget.noteService.configService.loadConfig();
+    if (mounted) {
+      setState(() {
+        _hotkeys = config.hotkeys;
+      });
+    }
   }
 
   @override
@@ -334,8 +347,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
     return Focus(
       onKeyEvent: (node, event) {
         if (event is KeyDownEvent) {
-          // Handle '+' key for add note - show type selector
-          if (event.character == '+' || event.logicalKey == LogicalKeyboardKey.add) {
+          // Handle new note hotkey
+          if (HotkeyHelper.matches(event, _hotkeys.newNote)) {
             _showNoteTypeSelector();
             return KeyEventResult.handled;
           }
@@ -416,8 +429,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
         autofocus: false,
         onKeyEvent: (node, event) {
           if (event is KeyDownEvent) {
-            // Handle '/' key to focus search bar when body is focused
-            if (event.character == '/' && !_searchFocusNode.hasFocus) {
+            // Handle search hotkey to focus search bar when body is focused
+            if (HotkeyHelper.matches(event, _hotkeys.search) && !_searchFocusNode.hasFocus) {
               _searchFocusNode.requestFocus();
               setState(() => _selectedResultIndex = null);
               return KeyEventResult.handled;
@@ -454,8 +467,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
               return KeyEventResult.handled;
             }
 
-            // Down arrow or j: move to next result
-            if (event.logicalKey == LogicalKeyboardKey.arrowDown || event.character == 'j') {
+            // Move down hotkey
+            if (HotkeyHelper.matches(event, _hotkeys.moveDown)) {
               setState(() {
                 if (_selectedResultIndex == null) {
                   _selectedResultIndex = 0;
@@ -467,8 +480,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
               return KeyEventResult.handled;
             }
 
-            // Up arrow or k: move to previous result
-            if (event.logicalKey == LogicalKeyboardKey.arrowUp || event.character == 'k') {
+            // Move up hotkey
+            if (HotkeyHelper.matches(event, _hotkeys.moveUp)) {
               setState(() {
                 if (_selectedResultIndex == null) {
                   _selectedResultIndex = _filteredNotes.length - 1;
@@ -486,8 +499,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
               return KeyEventResult.handled;
             }
 
-            // 'e': open selected result in edit mode
-            if (event.character == 'e' && _selectedResultIndex != null) {
+            // Edit note hotkey
+            if (HotkeyHelper.matches(event, _hotkeys.editNote) && _selectedResultIndex != null) {
               _navigateToEditor(_filteredNotes[_selectedResultIndex!]);
               return KeyEventResult.handled;
             }

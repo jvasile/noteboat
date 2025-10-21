@@ -75,29 +75,24 @@ Links and tags are automatically detected and made clickable:
 
 ### Keyboard Shortcuts
 
-**View Screen:**
-- `e` - Edit current note
-- `+` - Add note (or edit if exists)
-- `Escape` or `Alt + Left Arrow` - Go back to previous screen
-- `Delete` - Delete current note
-- `/` - Switch to All Notes (search) screen
+Keyboard shortcuts are fully configurable in Settings. Default shortcuts include:
+- **New Note**: `+`
+- **Search**: `/`
+- **Edit Note**: `e`
+- **Navigate Back**: `Escape` or `Alt+Left Arrow`
+- **Move Up**: `Arrow Up` or `k`
+- **Move Down**: `Arrow Down` or `j`
+- **Close Dialog**: `Escape`
+
+Additional fixed shortcuts:
+- `Ctrl/Cmd + P` - Toggle preview (Edit mode)
+- `Ctrl/Cmd + S` - Save (Edit/Settings mode)
+- `Tab` - Navigate between UI elements
+- `Enter` - Confirm/Open
+- `Delete` - Delete current note (View mode)
 - `Left/Right Arrow` - Navigate linked list notes (if applicable)
 
-**List/Search Screen:**
-- `+` - Add note (or edit if exists)
-- `/` - Focus search bar
-- `Tab` - Navigate search results
-- `j/k` or `Arrow Keys` - Navigate results
-- `Enter` - Open selected result
-
-**Edit Screen:**
-- `Ctrl/Cmd + P` - Toggle preview
-- `Ctrl/Cmd + S` - Save and exit
-- `Escape` - Exit (confirms if unsaved changes)
-
-**Settings Screen:**
-- `Ctrl/Cmd + S` - Save settings
-- `Escape` - Exit (confirms if unsaved changes)
+To customize shortcuts, open Settings and edit the "Keyboard Shortcuts" section.
 
 ## Command-Line Interface
 
@@ -125,6 +120,8 @@ directory. Settings include:
 - `directories`: List of note directories to search/write
 - `defaultEditor`: Default editor name for new notes
 - `themeMode`: Theme preference (light/dark/system)
+- `baseFontSize`: Base font size for markdown rendering
+- `hotkeys`: Customizable keyboard shortcuts
 
 ## Design
 
