@@ -28,7 +28,14 @@ class NoteMarkdownViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final processedText = TextHelper.removeDuplicateHeading(text, noteTitle);
+    var processedText = TextHelper.removeDuplicateHeading(text, noteTitle);
+
+    // Convert to markdown links
+    processedText = MarkdownLinkHelper.makeLinksClickable(
+      processedText,
+      noteTitle,
+      existingNoteTitles: existingNoteTitles,
+    );
 
     // Start with theme-based stylesheet and customize with user font size
     final baseStyleSheet = MarkdownStyleSheet.fromTheme(Theme.of(context));
@@ -94,20 +101,35 @@ class NoteMarkdownViewer extends StatelessWidget {
     );
 
     final markdownBody = MarkdownBody(
-      data: MarkdownLinkHelper.makeLinksClickable(
-        processedText,
-        noteTitle,
-        existingNoteTitles: existingNoteTitles,
-      ),
+      data: processedText,
       selectable: false,  // Let SelectionArea handle selection instead
       styleSheet: styleSheet,
+      onTapLink: (String text, String? href, String title) {
+        if (href == null) return;
+
+        // Determine link type and handle accordingly
+        if (href.startsWith('http://') || href.startsWith('https://')) {
+          // External URL
+          MarkdownLinkHelper.openUrl(href);
+        } else if (href.startsWith('#')) {
+          // Hashtag
+          final tag = href.substring(1);
+          onTagTap?.call(tag);
+        } else {
+          // Note link - decode URL encoding
+          String decodedHref;
+          try {
+            decodedHref = Uri.decodeComponent(href);
+          } catch (e) {
+            decodedHref = href;
+          }
+          onNoteLinkTap?.call(decodedHref);
+        }
+      },
       builders: {
         'a': NoteLinkBuilder(
           existingNoteTitles: existingNoteTitles,
           baseFontSize: baseFontSize,
-          onNoteLinkTap: onNoteLinkTap,
-          onTagTap: onTagTap,
-          selectable: selectable,
         ),
       },
     );
@@ -122,78 +144,27 @@ class NoteMarkdownViewer extends StatelessWidget {
 }
 
 /// Custom link builder that styles links based on whether the target note exists
+/// Note: Currently returns null to avoid flutter_markdown duplicate rendering bug
+/// When returning a custom widget, flutter_markdown incorrectly renders both the
+/// widget AND remaining text children when link text is split into multiple nodes
 class NoteLinkBuilder extends MarkdownElementBuilder {
   final Set<String> existingNoteTitles;
   final double baseFontSize;
-  final Function(String)? onNoteLinkTap;
-  final Function(String)? onTagTap;
-  final bool selectable;
 
   NoteLinkBuilder({
     required this.existingNoteTitles,
     required this.baseFontSize,
-    this.onNoteLinkTap,
-    this.onTagTap,
-    this.selectable = true,
   });
 
   @override
   Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
-    final String href = element.attributes['href'] ?? '';
-    final String text = element.textContent;
+    // Return null to let flutter_markdown handle rendering
+    // This avoids a bug where custom widgets cause duplicate text when
+    // link text contains multiple capitalized words (e.g., "Dumbing Of Age")
 
-    // Determine if this is a URL, hashtag, or note link
-    bool isUrl = href.startsWith('http://') || href.startsWith('https://');
-    bool isHashtag = href.startsWith('#');
+    // TODO: Find a way to customize link colors (red for non-existent notes)
+    // without triggering the duplicate rendering bug
 
-    Color linkColor;
-    void Function()? onTap;
-
-    if (isUrl) {
-      // External URL - blue
-      linkColor = Colors.blue;
-      onTap = () async {
-        await MarkdownLinkHelper.openUrl(href);
-      };
-    } else if (isHashtag) {
-      // Hashtag - blue
-      linkColor = Colors.blue;
-      onTap = () {
-        final tag = href.substring(1);
-        onTagTap?.call(tag);
-      };
-    } else {
-      // Note link - URL decode it first (markdown renderer encodes spaces as %20)
-      String decodedHref;
-      try {
-        decodedHref = Uri.decodeComponent(href);
-      } catch (e) {
-        // If decoding fails, use original
-        decodedHref = href;
-      }
-
-      // Extract the actual note title (strip query params)
-      final cleanHref = decodedHref.split('?').first;
-      final noteExists = existingNoteTitles.contains(cleanHref);
-
-      linkColor = noteExists ? Colors.blue : Colors.red;
-      onTap = () {
-        onNoteLinkTap?.call(decodedHref);
-      };
-    }
-
-    final textStyle = (preferredStyle ?? TextStyle(fontSize: baseFontSize)).copyWith(
-      color: linkColor,
-      decoration: TextDecoration.underline,
-    );
-
-    // Always use RichText - SelectionArea will handle text selection
-    return RichText(
-      text: TextSpan(
-        text: text,
-        style: textStyle,
-        recognizer: TapGestureRecognizer()..onTap = onTap,
-      ),
-    );
+    return null;
   }
 }
