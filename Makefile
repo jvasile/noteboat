@@ -21,7 +21,7 @@ GUI_TARGET := $(BUILD_DIR)/noteboat-gui
 DART_SOURCES := $(shell find lib bin -name '*.dart' 2>/dev/null)
 OTHER_SOURCES := pubspec.yaml pubspec.lock linux/CMakeLists.txt
 
-.PHONY: all clean test help debug release install uninstall windows windows-debug windows-release
+.PHONY: all clean test help debug release install uninstall windows windows-debug windows-release windows-installer windows-installer-debug windows-installer-release
 
 # Default target
 all: $(GUI_TARGET) $(CLI_TARGET)
@@ -66,6 +66,20 @@ $(WIN_CLI_TARGET): $(WIN_GUI_TARGET) bin/noteboat.dart $(DART_SOURCES)
 	@echo "Building pure Dart CLI for Windows as noteboat.exe ($(MODE) mode)..."
 	$(DART) compile exe bin/noteboat.dart -o $(WIN_CLI_TARGET)
 	@echo "✓ Windows pure Dart CLI built"
+
+# Windows MSIX installer targets
+windows-installer: $(WIN_CLI_TARGET)
+	@echo "Creating Windows MSIX installer ($(MODE) mode)..."
+	$(FLUTTER) pub get
+	$(DART) run msix:create
+	@echo "✓ Windows MSIX installer created"
+	@echo "Output: build/windows/x64/runner/Release/noteboat.msix"
+
+windows-installer-debug:
+	$(MAKE) MODE=debug windows-installer
+
+windows-installer-release:
+	$(MAKE) MODE=release windows-installer
 
 # Build GUI - depends on source files
 $(GUI_TARGET): $(DART_SOURCES) $(OTHER_SOURCES)
@@ -127,9 +141,11 @@ help:
 	@echo "  make debug        - Build both for Linux in debug mode"
 	@echo ""
 	@echo "Windows builds:"
-	@echo "  make windows         - Build both CLI and GUI for Windows in release mode"
-	@echo "  make windows-release - Build both for Windows in release mode"
-	@echo "  make windows-debug   - Build both for Windows in debug mode"
+	@echo "  make windows                - Build both CLI and GUI for Windows in release mode"
+	@echo "  make windows-release        - Build both for Windows in release mode"
+	@echo "  make windows-debug          - Build both for Windows in debug mode"
+	@echo "  make windows-installer      - Build and create MSIX installer (release mode)"
+	@echo "  make windows-installer-debug   - Build and create MSIX installer (debug mode)"
 	@echo ""
 	@echo "Other targets:"
 	@echo "  make test         - Run test suite"
@@ -147,10 +163,10 @@ help:
 	@echo "  sudo make install PREFIX=/  # Install to /opt/noteboat and /bin"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make                # Linux release build"
-	@echo "  make debug          # Linux debug build"
-	@echo "  make windows        # Windows release build"
-	@echo "  make windows-debug  # Windows debug build"
+	@echo "  make                     # Linux release build"
+	@echo "  make debug               # Linux debug build"
+	@echo "  make windows             # Windows release build"
+	@echo "  make windows-installer   # Windows MSIX installer"
 	@echo ""
 	@echo "Current mode: $(MODE)"
 	@echo ""

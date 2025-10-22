@@ -75,6 +75,9 @@ dev_dependencies:
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
 
+  # For creating Windows MSIX installers
+  msix: ^3.16.8
+
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
 
@@ -115,3 +118,15 @@ flutter:
   #
   # For details regarding fonts from package dependencies,
   # see https://flutter.dev/to/font-from-package
+
+# MSIX installer configuration for Windows
+msix_config:
+  display_name: Noteboat
+  publisher_display_name: Noteboat
+  identity_name: com.noteboat.app
+  msix_version: 1.0.0.0
+  logo_path: windows/runner/resources/app_icon.ico
+  capabilities: 'internetClient'
+  # Note: For production, sign with a proper certificate:
+  # certificate_path: path/to/certificate.pfx
+  # certificate_password: your_password
