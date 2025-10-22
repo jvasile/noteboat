@@ -13,7 +13,20 @@ void main(List<String> args) async {
   // Ensure all note types are registered before starting the app
   ensureTypesRegistered();
 
-  // If CLI arguments are provided, run in CLI mode
+  // Handle version and help flags immediately without initializing Flutter
+  if (args.isNotEmpty) {
+    final command = args[0];
+    if (command == '--version' || command == '-v') {
+      printVersion();
+      exit(0);
+    }
+    if (command == 'help' || command == '--help' || command == '-h') {
+      printHelp();
+      exit(0);
+    }
+  }
+
+  // If other CLI arguments are provided, run in CLI mode
   if (args.isNotEmpty) {
     await runCLI(args);
     exit(0);
@@ -30,12 +43,23 @@ Future<void> runCLI(List<String> args) async {
     return;
   }
 
-  // Initialize services
+  final command = args[0];
+
+  // Handle version and help without initializing services
+  if (command == '--version' || command == '-v') {
+    printVersion();
+    return;
+  }
+
+  if (command == 'help' || command == '--help' || command == '-h') {
+    printHelp();
+    return;
+  }
+
+  // Initialize services for other commands
   final configService = ConfigService();
   final noteService = NoteService(configService);
   await noteService.initialize();
-
-  final command = args[0];
 
   switch (command) {
     case 'list':
@@ -43,9 +67,6 @@ Future<void> runCLI(List<String> args) async {
       break;
     case 'search':
       await handleSearchCommand(noteService, args);
-      break;
-    case 'help':
-      printHelp();
       break;
     default:
       print('Unknown command: $command');
@@ -96,6 +117,12 @@ Future<void> handleSearchCommand(NoteService noteService, List<String> args) asy
   }
 }
 
+// Print version information
+void printVersion() {
+  const version = '1.0.0';
+  print('Noteboat version $version');
+}
+
 // Print help message
 void printHelp() {
   print('Noteboat - Linked note-taking application');
@@ -105,12 +132,14 @@ void printHelp() {
   print('Commands:');
   print('  list                    List all notes');
   print('  search <query>...       Search notes (multiple terms supported)');
-  print('  help                    Show this help message');
+  print('  --version, -v           Show version information');
+  print('  help, --help, -h        Show this help message');
   print('  (no arguments)          Launch GUI');
   print('');
   print('Examples:');
   print('  noteboat list');
   print('  noteboat search foo bar baz');
+  print('  noteboat --version');
 }
 
 class NoteboatApp extends StatefulWidget {
