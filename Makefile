@@ -1,0 +1,167 @@
+# Makefile for Noteboat - builds both CLI and GUI executables
+
+FLUTTER := /home/james/flutter/bin/flutter
+DART := /home/james/flutter/bin/dart
+
+# Build mode: debug or release (default: release)
+MODE ?= release
+
+ifeq ($(MODE),debug)
+    BUILD_DIR := build/linux/x64/debug/bundle
+    FLUTTER_FLAGS := --debug
+else
+    BUILD_DIR := build/linux/x64/release/bundle
+    FLUTTER_FLAGS := --release
+endif
+
+CLI_TARGET := $(BUILD_DIR)/noteboat
+GUI_TARGET := $(BUILD_DIR)/noteboat-gui
+
+# Source files for dependency tracking
+DART_SOURCES := $(shell find lib bin -name '*.dart' 2>/dev/null)
+OTHER_SOURCES := pubspec.yaml pubspec.lock linux/CMakeLists.txt
+
+.PHONY: all clean test help debug release install uninstall windows windows-debug windows-release
+
+# Default target
+all: $(GUI_TARGET) $(CLI_TARGET)
+
+# Convenience targets for debug and release
+debug:
+	$(MAKE) MODE=debug all
+
+release:
+	$(MAKE) MODE=release all
+
+# Windows build configuration
+ifeq ($(MODE),debug)
+    WIN_BUILD_DIR := build/windows/x64/runner/Debug
+    WIN_FLUTTER_FLAGS := --debug
+else
+    WIN_BUILD_DIR := build/windows/x64/runner/Release
+    WIN_FLUTTER_FLAGS := --release
+endif
+
+WIN_GUI_TARGET := $(WIN_BUILD_DIR)/noteboat-gui.exe
+WIN_CLI_TARGET := $(WIN_BUILD_DIR)/noteboat.exe
+
+# Windows build targets
+windows: $(WIN_GUI_TARGET) $(WIN_CLI_TARGET)
+
+windows-debug:
+	$(MAKE) MODE=debug windows
+
+windows-release:
+	$(MAKE) MODE=release windows
+
+$(WIN_GUI_TARGET): $(DART_SOURCES) $(OTHER_SOURCES)
+	@echo "Building Flutter GUI for Windows as noteboat-gui.exe ($(MODE) mode)..."
+	$(FLUTTER) build windows $(WIN_FLUTTER_FLAGS)
+	@if [ -f "$(WIN_BUILD_DIR)/noteboat.exe" ]; then \
+		mv "$(WIN_BUILD_DIR)/noteboat.exe" "$(WIN_GUI_TARGET)"; \
+	fi
+	@echo "✓ Windows Flutter GUI built"
+
+$(WIN_CLI_TARGET): $(WIN_GUI_TARGET) bin/noteboat.dart $(DART_SOURCES)
+	@echo "Building pure Dart CLI for Windows as noteboat.exe ($(MODE) mode)..."
+	$(DART) compile exe bin/noteboat.dart -o $(WIN_CLI_TARGET)
+	@echo "✓ Windows pure Dart CLI built"
+
+# Build GUI - depends on source files
+$(GUI_TARGET): $(DART_SOURCES) $(OTHER_SOURCES)
+	@echo "Building Flutter GUI as noteboat-gui ($(MODE) mode)..."
+	$(FLUTTER) build linux $(FLUTTER_FLAGS)
+	@echo "✓ Flutter GUI built"
+
+# Build CLI - depends on GUI for bundle directory structure and on source files
+$(CLI_TARGET): $(GUI_TARGET) bin/noteboat.dart $(DART_SOURCES)
+	@echo "Building pure Dart CLI as noteboat ($(MODE) mode)..."
+	$(DART) compile exe bin/noteboat.dart -o $(CLI_TARGET)
+	@echo "✓ Pure Dart CLI built"
+
+# Run tests
+test:
+	@echo "Running tests..."
+	$(FLUTTER) test
+
+# Clean build artifacts
+clean:
+	@echo "Cleaning build artifacts..."
+	$(FLUTTER) clean
+	@echo "✓ Build directory cleaned"
+
+# Install to system
+PREFIX ?= /usr/local
+INSTALL_DIR := $(PREFIX)/bin
+BUNDLE_INSTALL_DIR := /opt/noteboat
+
+install: $(GUI_TARGET) $(CLI_TARGET)
+	@echo "Installing noteboat..."
+	@echo "  Copying bundle to $(BUNDLE_INSTALL_DIR)..."
+	install -d $(BUNDLE_INSTALL_DIR)
+	cp -r $(BUILD_DIR)/* $(BUNDLE_INSTALL_DIR)/
+	@echo "  Creating symlinks in $(INSTALL_DIR)..."
+	install -d $(INSTALL_DIR)
+	ln -sf $(BUNDLE_INSTALL_DIR)/noteboat $(INSTALL_DIR)/noteboat
+	ln -sf $(BUNDLE_INSTALL_DIR)/noteboat-gui $(INSTALL_DIR)/noteboat-gui
+	@echo "✓ Installed noteboat to $(INSTALL_DIR)/noteboat"
+	@echo "✓ Installed noteboat-gui to $(INSTALL_DIR)/noteboat-gui"
+	@echo "✓ Bundle installed to $(BUNDLE_INSTALL_DIR)"
+
+# Uninstall from system
+uninstall:
+	@echo "Uninstalling noteboat..."
+	rm -f $(INSTALL_DIR)/noteboat
+	rm -f $(INSTALL_DIR)/noteboat-gui
+	rm -rf $(BUNDLE_INSTALL_DIR)
+	@echo "✓ Uninstalled"
+
+# Show help
+help:
+	@echo "Noteboat Build Targets:"
+	@echo ""
+	@echo "Linux builds:"
+	@echo "  make              - Build both CLI and GUI for Linux in release mode (default)"
+	@echo "  make all          - Build both CLI and GUI for Linux"
+	@echo "  make release      - Build both for Linux in release mode"
+	@echo "  make debug        - Build both for Linux in debug mode"
+	@echo ""
+	@echo "Windows builds:"
+	@echo "  make windows         - Build both CLI and GUI for Windows in release mode"
+	@echo "  make windows-release - Build both for Windows in release mode"
+	@echo "  make windows-debug   - Build both for Windows in debug mode"
+	@echo ""
+	@echo "Other targets:"
+	@echo "  make test         - Run test suite"
+	@echo "  make clean        - Remove build artifacts"
+	@echo "  make install      - Install to system (Linux only, requires sudo)"
+	@echo "  make uninstall    - Remove from system (Linux only, requires sudo)"
+	@echo "  make help         - Show this help message"
+	@echo ""
+	@echo "Build modes:"
+	@echo "  MODE=release      - Optimized release build (default)"
+	@echo "  MODE=debug        - Debug build with symbols"
+	@echo ""
+	@echo "Installation (Linux only):"
+	@echo "  sudo make install           # Install to /opt/noteboat and /usr/local/bin"
+	@echo "  sudo make install PREFIX=/  # Install to /opt/noteboat and /bin"
+	@echo ""
+	@echo "Examples:"
+	@echo "  make                # Linux release build"
+	@echo "  make debug          # Linux debug build"
+	@echo "  make windows        # Windows release build"
+	@echo "  make windows-debug  # Windows debug build"
+	@echo ""
+	@echo "Current mode: $(MODE)"
+	@echo ""
+	@echo "Linux output directory: $(BUILD_DIR)/"
+	@echo "  noteboat      - CLI executable"
+	@echo "  noteboat-gui  - GUI executable"
+	@echo "  lib/          - Flutter engine libraries"
+	@echo "  data/         - Flutter assets"
+	@echo ""
+	@echo "Windows output directory: $(WIN_BUILD_DIR)/"
+	@echo "  noteboat.exe      - CLI executable"
+	@echo "  noteboat-gui.exe  - GUI executable"
+	@echo "  *.dll             - Flutter engine DLL files"
+	@echo "  data/             - Flutter assets"
