@@ -4,7 +4,7 @@ const String version = '1.0.0';
 
 /// Print version information
 void printVersion() {
-  print('Noteboat version $version');
+  print(version);
 }
 
 /// Print help message
