@@ -21,6 +21,11 @@ version: 1.0.0+1
 environment:
   sdk: ^3.6.1
 
+# Executables
+executables:
+  noteboat:     # Pure Dart CLI (bin/noteboat.dart)
+  noteboat-gui: # Flutter GUI (lib/main.dart)
+
 # Dependencies specify other packages that your package needs in order to work.
 # To automatically upgrade your package dependencies to the latest versions
 # consider running `flutter pub upgrade --major-versions`. Alternatively,

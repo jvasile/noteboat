@@ -1,4 +1,3 @@
-import 'dart:io';
 import 'package:flutter/material.dart';
 import 'services/config_service.dart';
 import 'services/note_service.dart';
@@ -9,137 +8,12 @@ import 'types/types.dart'; // Import early to ensure type registration
 
 export 'services/config_service.dart' show AppConfig;
 
-void main(List<String> args) async {
+void main() async {
   // Ensure all note types are registered before starting the app
   ensureTypesRegistered();
 
-  // Handle version and help flags immediately without initializing Flutter
-  if (args.isNotEmpty) {
-    final command = args[0];
-    if (command == '--version' || command == '-v') {
-      printVersion();
-      exit(0);
-    }
-    if (command == 'help' || command == '--help' || command == '-h') {
-      printHelp();
-      exit(0);
-    }
-  }
-
-  // If other CLI arguments are provided, run in CLI mode
-  if (args.isNotEmpty) {
-    await runCLI(args);
-    exit(0);
-  }
-
-  // Otherwise, run the GUI
+  // Run the GUI
   runApp(const NoteboatApp());
-}
-
-// CLI mode handler
-Future<void> runCLI(List<String> args) async {
-  if (args.isEmpty) {
-    printHelp();
-    return;
-  }
-
-  final command = args[0];
-
-  // Handle version and help without initializing services
-  if (command == '--version' || command == '-v') {
-    printVersion();
-    return;
-  }
-
-  if (command == 'help' || command == '--help' || command == '-h') {
-    printHelp();
-    return;
-  }
-
-  // Initialize services for other commands
-  final configService = ConfigService();
-  final noteService = NoteService(configService);
-  await noteService.initialize();
-
-  switch (command) {
-    case 'list':
-      await handleListCommand(noteService);
-      break;
-    case 'search':
-      await handleSearchCommand(noteService, args);
-      break;
-    default:
-      print('Unknown command: $command');
-      printHelp();
-  }
-}
-
-// Handle 'list' command
-Future<void> handleListCommand(NoteService noteService) async {
-  final notes = await noteService.getAllNotes();
-
-  if (notes.isEmpty) {
-    print('No notes found.');
-    return;
-  }
-
-  print('All notes:');
-  for (final note in notes) {
-    final tagCount = note.tags.length;
-    final linkCount = note.links.length;
-    print('  ${note.title}: $tagCount tags, $linkCount links');
-  }
-}
-
-// Handle 'search' command
-Future<void> handleSearchCommand(NoteService noteService, List<String> args) async {
-  if (args.length < 2) {
-    print('Usage: noteboat search <query terms...>');
-    return;
-  }
-
-  // Join all search terms after 'search' into a single query
-  final query = args.sublist(1).join(' ');
-  final results = await noteService.searchNotes(query);
-
-  if (results.isEmpty) {
-    print('No notes found matching "$query"');
-    return;
-  }
-
-  print('Notes matching "$query":');
-  for (final note in results) {
-    final preview = note.text.length > 50
-        ? '${note.text.substring(0, 50)}...'
-        : note.text;
-    final cleanPreview = preview.replaceAll('\n', ' ');
-    print('  ${note.title}: $cleanPreview');
-  }
-}
-
-// Print version information
-void printVersion() {
-  const version = '1.0.0';
-  print('Noteboat version $version');
-}
-
-// Print help message
-void printHelp() {
-  print('Noteboat - Linked note-taking application');
-  print('');
-  print('Usage: noteboat [command] [arguments]');
-  print('');
-  print('Commands:');
-  print('  list                    List all notes');
-  print('  search <query>...       Search notes (multiple terms supported)');
-  print('  --version, -v           Show version information');
-  print('  help, --help, -h        Show this help message');
-  print('  (no arguments)          Launch GUI');
-  print('');
-  print('Examples:');
-  print('  noteboat list');
-  print('  noteboat search foo bar baz');
-  print('  noteboat --version');
 }
 
 class NoteboatApp extends StatefulWidget {

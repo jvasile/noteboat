@@ -96,3 +96,10 @@ Avoid hardcoded colors like `Colors.blue.shade50`.
 
 Unit tests in `test/` directory. Main test file is `test/widget_test.dart`.
 
+### CLI
+
+There are two executables, noteboat and noteboat-gui.  The noteboat excutable
+handles CLI operations and calls the GUI as needed.  This helps prevent the GUI
+from flashing up on screen and then disappearing when the user does purely CLI
+operations.  To facilitate the separation, some code has been moved to a shared
+library.
