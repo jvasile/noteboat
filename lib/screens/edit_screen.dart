@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../models/note.dart';
@@ -5,6 +6,7 @@ import '../services/note_service.dart';
 import '../services/config_service.dart';
 import '../utils/hotkey_helper.dart';
 import '../widgets/note_markdown_viewer.dart';
+import '../widgets/nvim_editor.dart';
 
 class EditScreen extends StatefulWidget {
   final NoteService noteService;
@@ -27,27 +29,37 @@ class _EditScreenState extends State<EditScreen> {
   bool _isPreview = false;
   bool _isSaving = false;
   String _originalTitle = '';
+  String _currentText = ''; // For nvim mode: tracks current content
   HotkeyConfig _hotkeys = const HotkeyConfig();
+  String _editorMode = 'basic';
+  bool _useNvim = false;
 
   @override
   void initState() {
     super.initState();
     _originalTitle = widget.note.title;
+    _currentText = widget.note.text;
     _titleController = TextEditingController(text: widget.note.title);
     _textController = TextEditingController(text: widget.note.text);
-    _loadHotkeys();
-    // Request focus on text field after first frame and position cursor at beginning
+    _loadConfig();
+    // Request focus on text field after first frame (only for basic editor)
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _textFocusNode.requestFocus();
-      _textController.selection = const TextSelection.collapsed(offset: 0);
+      if (!_useNvim) {
+        _textFocusNode.requestFocus();
+        _textController.selection = const TextSelection.collapsed(offset: 0);
+      }
     });
   }
 
-  Future<void> _loadHotkeys() async {
+  Future<void> _loadConfig() async {
     final config = await widget.noteService.configService.loadConfig();
     if (mounted) {
       setState(() {
         _hotkeys = config.hotkeys;
+        _editorMode = config.editorMode;
+        // Only use nvim if configured AND on Linux/macOS
+        _useNvim = _editorMode == 'nvim' &&
+                   (Platform.isLinux || Platform.isMacOS);
       });
     }
   }
@@ -60,9 +72,10 @@ class _EditScreenState extends State<EditScreen> {
     super.dispose();
   }
 
-  Future<void> _saveNote() async {
+  Future<void> _saveNote({bool closeAfterSave = true}) async {
     final title = _titleController.text.trim();
-    final text = _textController.text.trim();
+    // Use _currentText for nvim mode, _textController for basic mode
+    final text = _useNvim ? _currentText.trim() : _textController.text.trim();
 
     if (title.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -98,7 +111,9 @@ class _EditScreenState extends State<EditScreen> {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('Note saved')),
         );
-        Navigator.pop(context, true); // Return true to indicate save
+        if (closeAfterSave) {
+          Navigator.pop(context, true); // Return true to indicate save
+        }
       }
     } catch (e) {
       if (mounted) {
@@ -113,13 +128,35 @@ class _EditScreenState extends State<EditScreen> {
     }
   }
 
+  void _onNvimSave(String content) {
+    // Update current text and save note (without closing)
+    setState(() {
+      _currentText = content;
+    });
+    _saveNote(closeAfterSave: false);
+  }
+
+  void _onNvimQuit() {
+    // User quit nvim, close the editor screen
+    if (mounted) {
+      Navigator.pop(context, true);
+    }
+  }
+
   void _togglePreview() {
     setState(() => _isPreview = !_isPreview);
   }
 
   bool _hasUnsavedChanges() {
-    return _titleController.text != widget.note.title ||
-        _textController.text != widget.note.text;
+    if (_titleController.text != widget.note.title) {
+      return true;
+    }
+    // Check text changes based on editor mode
+    if (_useNvim) {
+      return _currentText != widget.note.text;
+    } else {
+      return _textController.text != widget.note.text;
+    }
   }
 
   Future<bool> _confirmDiscard() async {
@@ -176,18 +213,20 @@ class _EditScreenState extends State<EditScreen> {
       },
       child: Scaffold(
         appBar: AppBar(
-          title: Text(_isPreview ? 'Preview' : 'Edit Note'),
+          title: Text(_isPreview ? 'Preview' : (_useNvim ? 'Edit Note (Neovim)' : 'Edit Note')),
           backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-          leading: IconButton(
+          leading: _useNvim ? null : IconButton(
             icon: const Icon(Icons.close),
             onPressed: _handleClose,
           ),
           actions: [
-            IconButton(
-              icon: Icon(_isPreview ? Icons.edit : Icons.visibility),
-              tooltip: _isPreview ? 'Edit' : 'Preview',
-              onPressed: _togglePreview,
-            ),
+            // Only show preview toggle for basic editor
+            if (!_useNvim)
+              IconButton(
+                icon: Icon(_isPreview ? Icons.edit : Icons.visibility),
+                tooltip: _isPreview ? 'Edit' : 'Preview',
+                onPressed: _togglePreview,
+              ),
             if (_isSaving)
               const Center(
                 child: Padding(
@@ -199,11 +238,12 @@ class _EditScreenState extends State<EditScreen> {
                   ),
                 ),
               )
-            else
+            // Only show save button for basic editor (nvim saves automatically)
+            else if (!_useNvim)
               IconButton(
                 icon: const Icon(Icons.save),
                 tooltip: 'Save',
-                onPressed: _saveNote,
+                onPressed: () => _saveNote(),
               ),
           ],
         ),
@@ -213,6 +253,37 @@ class _EditScreenState extends State<EditScreen> {
   }
 
   Widget _buildEditor() {
+    if (_useNvim) {
+      return SizedBox.expand(
+        child: Column(
+          children: [
+            // Title field for nvim mode
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: TextField(
+                controller: _titleController,
+                decoration: const InputDecoration(
+                  labelText: 'Title',
+                  hintText: 'MyNoteName or My Note Name',
+                  border: OutlineInputBorder(),
+                ),
+                style: Theme.of(context).textTheme.titleLarge,
+              ),
+            ),
+            // Neovim editor
+            Expanded(
+              child: NvimEditor(
+                initialContent: _currentText,
+                onSave: _onNvimSave,
+                onQuit: _onNvimQuit,
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    // Basic editor mode
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),
       primary: false,
@@ -301,7 +372,8 @@ class _EditScreenState extends State<EditScreen> {
 
   Widget _buildPreview() {
     final title = _titleController.text.trim();
-    final text = _textController.text.trim();
+    // Use _currentText for nvim mode (though preview shouldn't be shown for nvim)
+    final text = _useNvim ? _currentText.trim() : _textController.text.trim();
 
     return SingleChildScrollView(
       padding: const EdgeInsets.all(16),

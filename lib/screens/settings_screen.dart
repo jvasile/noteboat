@@ -1,3 +1,4 @@
+import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../services/config_service.dart';
@@ -33,6 +34,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   bool _isSaving = false;
   late ThemeMode _selectedThemeMode;
   double _baseFontSize = 16.0;
+  String _editorMode = 'basic';
 
   @override
   void initState() {
@@ -73,6 +75,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _config = config;
       _editorController.text = config.defaultEditor;
       _baseFontSize = config.baseFontSize;
+      _editorMode = config.editorMode;
       _newNoteController.text = config.hotkeys.newNote;
       _searchController.text = config.hotkeys.search;
       _editNoteController.text = config.hotkeys.editNote;
@@ -98,6 +101,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Check if font size changed
     final fontSizeChanged = _baseFontSize != _config!.baseFontSize;
 
+    // Check if editor mode changed
+    final editorModeChanged = _editorMode != _config!.editorMode;
+
     // Check if hotkeys changed
     final hotkeysChanged =
       _newNoteController.text != _config!.hotkeys.newNote ||
@@ -109,7 +115,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _moveDownController.text != _config!.hotkeys.moveDown ||
       _closeDialogController.text != _config!.hotkeys.closeDialog;
 
-    return editorChanged || themeChanged || fontSizeChanged || hotkeysChanged;
+    return editorChanged || themeChanged || fontSizeChanged || editorModeChanged || hotkeysChanged;
   }
 
   Future<bool> _confirmDiscard() async {
@@ -144,6 +150,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         defaultEditor: _editorController.text.trim(),
         themeMode: _config!.themeMode,
         baseFontSize: _baseFontSize,
+        editorMode: _editorMode,
         hotkeys: HotkeyConfig(
           newNote: _newNoteController.text,
           search: _searchController.text,
@@ -296,6 +303,73 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         });
                         widget.onThemeChanged!(newSelection.first);
                       },
+                    ),
+                  const SizedBox(height: 32),
+                  const Divider(),
+                  const SizedBox(height: 16),
+
+                  // Editor mode settings
+                  Text(
+                    'Editor Mode',
+                    style: Theme.of(context).textTheme.titleLarge,
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    Platform.isLinux || Platform.isMacOS
+                        ? 'Choose between basic editor or Neovim'
+                        : 'Neovim is only available on Linux/macOS',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
+                  const SizedBox(height: 16),
+                  SegmentedButton<String>(
+                    segments: [
+                      const ButtonSegment<String>(
+                        value: 'basic',
+                        label: Text('Basic'),
+                        icon: Icon(Icons.edit),
+                      ),
+                      ButtonSegment<String>(
+                        value: 'nvim',
+                        label: const Text('Neovim'),
+                        icon: const Icon(Icons.terminal),
+                        enabled: Platform.isLinux || Platform.isMacOS,
+                      ),
+                    ],
+                    selected: {_editorMode},
+                    onSelectionChanged: (Set<String> newSelection) {
+                      setState(() {
+                        _editorMode = newSelection.first;
+                      });
+                    },
+                  ),
+                  if (_editorMode == 'nvim' && (Platform.isLinux || Platform.isMacOS))
+                    Padding(
+                      padding: const EdgeInsets.only(top: 12.0),
+                      child: Card(
+                        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                        child: Padding(
+                          padding: const EdgeInsets.all(12.0),
+                          child: Row(
+                            children: [
+                              Icon(
+                                Icons.info_outline,
+                                size: 20,
+                                color: Theme.of(context).colorScheme.onSurface,
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Text(
+                                  'Neovim must be installed on your system. Your nvim config will be used. Save in nvim to save the note, :q to close editor.',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Theme.of(context).colorScheme.onSurface,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                     ),
                   const SizedBox(height: 32),
                   const Divider(),

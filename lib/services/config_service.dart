@@ -58,6 +58,7 @@ class AppConfig {
   final String themeMode; // 'light', 'dark', or 'system'
   final double baseFontSize; // Base font size for markdown content
   final HotkeyConfig hotkeys;
+  final String editorMode; // 'basic' or 'nvim' (nvim only available on Linux/macOS)
 
   AppConfig({
     required this.directories,
@@ -65,6 +66,7 @@ class AppConfig {
     this.themeMode = 'system',
     this.baseFontSize = 16.0,
     this.hotkeys = const HotkeyConfig(),
+    this.editorMode = 'basic',
   });
 
   factory AppConfig.fromMap(Map<String, dynamic> map) {
@@ -91,6 +93,13 @@ class AppConfig {
       hotkeys = HotkeyConfig.fromMap(Map<String, dynamic>.from(map['hotkeys']));
     }
 
+    // Parse editorMode if present
+    String editorMode = map['editorMode']?.toString() ?? 'basic';
+    // Validate editorMode value
+    if (editorMode != 'basic' && editorMode != 'nvim') {
+      editorMode = 'basic';
+    }
+
     return AppConfig(
       directories: (map['directories'] as List?)
               ?.map((e) => e.toString())
@@ -100,6 +109,7 @@ class AppConfig {
       themeMode: map['themeMode']?.toString() ?? 'system',
       baseFontSize: fontSize,
       hotkeys: hotkeys,
+      editorMode: editorMode,
     );
   }
 
@@ -110,6 +120,7 @@ class AppConfig {
       'themeMode': themeMode,
       'baseFontSize': baseFontSize,
       'hotkeys': hotkeys.toMap(),
+      'editorMode': editorMode,
     };
   }
 }
@@ -160,6 +171,7 @@ class ConfigService {
         themeMode: 'system',
         baseFontSize: 16.0,
         hotkeys: const HotkeyConfig(),
+        editorMode: 'basic',
       );
 
       await saveConfig(_config!);
@@ -183,6 +195,7 @@ ${config.directories.map((d) => '  - $d').join('\n')}
 defaultEditor: $editorValue
 themeMode: ${config.themeMode}
 baseFontSize: ${config.baseFontSize}
+editorMode: ${config.editorMode}
 hotkeys:
   newNote: ${config.hotkeys.newNote}
   search: ${config.hotkeys.search}

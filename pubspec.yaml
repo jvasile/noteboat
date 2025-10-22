@@ -53,6 +53,12 @@ dependencies:
   # For opening URLs in browser
   url_launcher: ^6.3.1
 
+  # For terminal emulator (nvim editor support)
+  xterm: ^4.0.0
+
+  # For PTY/process management (nvim editor support)
+  flutter_pty: ^0.4.2
+
 dev_dependencies:
   flutter_test:
     sdk: flutter
