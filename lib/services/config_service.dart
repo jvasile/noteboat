@@ -59,6 +59,7 @@ class AppConfig {
   final double baseFontSize; // Base font size for markdown content
   final HotkeyConfig hotkeys;
   final String editorMode; // 'basic' or 'nvim' (nvim only available on Linux/macOS)
+  final double nvimFontSize; // Font size for nvim terminal
 
   AppConfig({
     required this.directories,
@@ -67,6 +68,7 @@ class AppConfig {
     this.baseFontSize = 16.0,
     this.hotkeys = const HotkeyConfig(),
     this.editorMode = 'basic',
+    this.nvimFontSize = 16.0,
   });
 
   factory AppConfig.fromMap(Map<String, dynamic> map) {
@@ -100,6 +102,15 @@ class AppConfig {
       editorMode = 'basic';
     }
 
+    // Parse nvim font size, default to 16.0
+    double nvimFontSize = 16.0;
+    if (map['nvimFontSize'] != null) {
+      final nvimFontSizeValue = map['nvimFontSize'];
+      if (nvimFontSizeValue is num) {
+        nvimFontSize = nvimFontSizeValue.toDouble();
+      }
+    }
+
     return AppConfig(
       directories: (map['directories'] as List?)
               ?.map((e) => e.toString())
@@ -110,6 +121,7 @@ class AppConfig {
       baseFontSize: fontSize,
       hotkeys: hotkeys,
       editorMode: editorMode,
+      nvimFontSize: nvimFontSize,
     );
   }
 
@@ -121,6 +133,7 @@ class AppConfig {
       'baseFontSize': baseFontSize,
       'hotkeys': hotkeys.toMap(),
       'editorMode': editorMode,
+      'nvimFontSize': nvimFontSize,
     };
   }
 }
@@ -172,6 +185,7 @@ class ConfigService {
         baseFontSize: 16.0,
         hotkeys: const HotkeyConfig(),
         editorMode: 'basic',
+        nvimFontSize: 16.0,
       );
 
       await saveConfig(_config!);
@@ -196,6 +210,7 @@ defaultEditor: $editorValue
 themeMode: ${config.themeMode}
 baseFontSize: ${config.baseFontSize}
 editorMode: ${config.editorMode}
+nvimFontSize: ${config.nvimFontSize}
 hotkeys:
   newNote: ${config.hotkeys.newNote}
   search: ${config.hotkeys.search}

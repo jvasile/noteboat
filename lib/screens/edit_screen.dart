@@ -33,6 +33,7 @@ class _EditScreenState extends State<EditScreen> {
   HotkeyConfig _hotkeys = const HotkeyConfig();
   String _editorMode = 'basic';
   bool _useNvim = false;
+  double _nvimFontSize = 16.0;
 
   @override
   void initState() {
@@ -57,6 +58,7 @@ class _EditScreenState extends State<EditScreen> {
       setState(() {
         _hotkeys = config.hotkeys;
         _editorMode = config.editorMode;
+        _nvimFontSize = config.nvimFontSize;
         // Only use nvim if configured AND on Linux/macOS
         _useNvim = _editorMode == 'nvim' &&
                    (Platform.isLinux || Platform.isMacOS);
@@ -276,6 +278,7 @@ class _EditScreenState extends State<EditScreen> {
                 initialContent: _currentText,
                 onSave: _onNvimSave,
                 onQuit: _onNvimQuit,
+                fontSize: _nvimFontSize,
               ),
             ),
           ],

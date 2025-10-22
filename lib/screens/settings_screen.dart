@@ -35,6 +35,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   late ThemeMode _selectedThemeMode;
   double _baseFontSize = 16.0;
   String _editorMode = 'basic';
+  double _nvimFontSize = 16.0;
 
   @override
   void initState() {
@@ -76,6 +77,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _editorController.text = config.defaultEditor;
       _baseFontSize = config.baseFontSize;
       _editorMode = config.editorMode;
+      _nvimFontSize = config.nvimFontSize;
       _newNoteController.text = config.hotkeys.newNote;
       _searchController.text = config.hotkeys.search;
       _editNoteController.text = config.hotkeys.editNote;
@@ -104,6 +106,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Check if editor mode changed
     final editorModeChanged = _editorMode != _config!.editorMode;
 
+    // Check if nvim font size changed
+    final nvimFontSizeChanged = _nvimFontSize != _config!.nvimFontSize;
+
     // Check if hotkeys changed
     final hotkeysChanged =
       _newNoteController.text != _config!.hotkeys.newNote ||
@@ -115,7 +120,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _moveDownController.text != _config!.hotkeys.moveDown ||
       _closeDialogController.text != _config!.hotkeys.closeDialog;
 
-    return editorChanged || themeChanged || fontSizeChanged || editorModeChanged || hotkeysChanged;
+    return editorChanged || themeChanged || fontSizeChanged || editorModeChanged || nvimFontSizeChanged || hotkeysChanged;
   }
 
   Future<bool> _confirmDiscard() async {
@@ -151,6 +156,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         themeMode: _config!.themeMode,
         baseFontSize: _baseFontSize,
         editorMode: _editorMode,
+        nvimFontSize: _nvimFontSize,
         hotkeys: HotkeyConfig(
           newNote: _newNoteController.text,
           search: _searchController.text,
@@ -342,7 +348,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       });
                     },
                   ),
-                  if (_editorMode == 'nvim' && (Platform.isLinux || Platform.isMacOS))
+                  if (_editorMode == 'nvim' && (Platform.isLinux || Platform.isMacOS)) ...[
                     Padding(
                       padding: const EdgeInsets.only(top: 12.0),
                       child: Card(
@@ -371,6 +377,38 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         ),
                       ),
                     ),
+                    const SizedBox(height: 16),
+                    Row(
+                      children: [
+                        Text(
+                          'Neovim Font Size:',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                        const SizedBox(width: 16),
+                        Expanded(
+                          child: Slider(
+                            value: _nvimFontSize,
+                            min: 10.0,
+                            max: 24.0,
+                            divisions: 14,
+                            label: _nvimFontSize.toStringAsFixed(0),
+                            onChanged: (value) {
+                              setState(() {
+                                _nvimFontSize = value;
+                              });
+                            },
+                          ),
+                        ),
+                        SizedBox(
+                          width: 40,
+                          child: Text(
+                            '${_nvimFontSize.toStringAsFixed(0)}',
+                            style: Theme.of(context).textTheme.bodyLarge,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                   const SizedBox(height: 32),
                   const Divider(),
                   const SizedBox(height: 16),

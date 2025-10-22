@@ -17,12 +17,14 @@ class NvimEditor extends StatefulWidget {
   final String initialContent;
   final Function(String content) onSave;
   final VoidCallback onQuit;
+  final double fontSize;
 
   const NvimEditor({
     super.key,
     required this.initialContent,
     required this.onSave,
     required this.onQuit,
+    this.fontSize = 16.0,
   });
 
   @override
@@ -160,7 +162,7 @@ class _NvimEditorState extends State<NvimEditor> {
     return TerminalView(
       _terminal!,
       textStyle: TerminalStyle(
-        fontSize: 14,
+        fontSize: widget.fontSize,
         fontFamily: 'monospace',
       ),
       autofocus: true,
