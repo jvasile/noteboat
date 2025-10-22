@@ -30,11 +30,12 @@ class NvimEditor extends StatefulWidget {
 }
 
 class _NvimEditorState extends State<NvimEditor> {
-  late Terminal _terminal;
-  late Pty _pty;
-  late File _tempFile;
+  Terminal? _terminal;
+  Pty? _pty;
+  File? _tempFile;
   late String _lastContent;
   bool _isDisposed = false;
+  bool _isInitialized = false;
 
   @override
   void initState() {
@@ -47,7 +48,7 @@ class _NvimEditorState extends State<NvimEditor> {
     // Create temporary file for editing
     final tempDir = await Directory.systemTemp.createTemp('noteboat_nvim_');
     _tempFile = File(path.join(tempDir.path, 'note.md'));
-    await _tempFile.writeAsString(widget.initialContent);
+    await _tempFile!.writeAsString(widget.initialContent);
 
     // Initialize terminal with reasonable max lines
     _terminal = Terminal(
@@ -57,33 +58,33 @@ class _NvimEditorState extends State<NvimEditor> {
     // Create PTY and launch nvim
     _pty = Pty.start(
       'nvim',
-      arguments: [_tempFile.path],
+      arguments: [_tempFile!.path],
       environment: Platform.environment,
     );
 
     // Listen for terminal resize events and update PTY
-    _terminal.onResize = (width, height, pixelWidth, pixelHeight) {
+    _terminal!.onResize = (width, height, pixelWidth, pixelHeight) {
       try {
-        _pty.resize(height, width);
+        _pty?.resize(height, width);
       } catch (e) {
         // Ignore resize errors
       }
     };
 
     // Connect PTY output to terminal
-    _pty.output.cast<List<int>>().listen((data) {
-      if (!_isDisposed) {
-        _terminal.write(String.fromCharCodes(data));
+    _pty!.output.cast<List<int>>().listen((data) {
+      if (!_isDisposed && _terminal != null) {
+        _terminal!.write(String.fromCharCodes(data));
       }
     });
 
     // Connect terminal input to PTY
-    _terminal.onOutput = (data) {
-      _pty.write(Utf8Encoder().convert(data));
+    _terminal!.onOutput = (data) {
+      _pty?.write(Utf8Encoder().convert(data));
     };
 
     // Watch for PTY exit (user quit nvim)
-    _pty.exitCode.then((exitCode) {
+    _pty!.exitCode.then((exitCode) {
       if (!_isDisposed) {
         _readFinalContent();
         widget.onQuit();
@@ -94,7 +95,9 @@ class _NvimEditorState extends State<NvimEditor> {
     _watchFileChanges();
 
     if (mounted) {
-      setState(() {});
+      setState(() {
+        _isInitialized = true;
+      });
     }
   }
 
@@ -105,10 +108,10 @@ class _NvimEditorState extends State<NvimEditor> {
 
       await Future.delayed(const Duration(milliseconds: 500));
 
-      if (_isDisposed || !await _tempFile.exists()) return false;
+      if (_isDisposed || _tempFile == null || !await _tempFile!.exists()) return false;
 
       try {
-        final currentContent = await _tempFile.readAsString();
+        final currentContent = await _tempFile!.readAsString();
         if (currentContent != _lastContent) {
           _lastContent = currentContent;
           widget.onSave(currentContent);
@@ -123,8 +126,8 @@ class _NvimEditorState extends State<NvimEditor> {
 
   Future<void> _readFinalContent() async {
     try {
-      if (await _tempFile.exists()) {
-        final content = await _tempFile.readAsString();
+      if (_tempFile != null && await _tempFile!.exists()) {
+        final content = await _tempFile!.readAsString();
         if (content != _lastContent) {
           widget.onSave(content);
         }
@@ -137,19 +140,25 @@ class _NvimEditorState extends State<NvimEditor> {
   @override
   void dispose() {
     _isDisposed = true;
-    _pty.kill();
+    _pty?.kill();
 
     // Clean up temp file
-    _tempFile.delete().catchError((_) {});
-    _tempFile.parent.delete().catchError((_) {});
+    _tempFile?.delete().catchError((_) {});
+    _tempFile?.parent.delete().catchError((_) {});
 
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    if (!_isInitialized || _terminal == null) {
+      return const Center(
+        child: CircularProgressIndicator(),
+      );
+    }
+
     return TerminalView(
-      _terminal,
+      _terminal!,
       textStyle: TerminalStyle(
         fontSize: 14,
         fontFamily: 'monospace',
