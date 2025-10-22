@@ -1,7 +1,7 @@
 #!/usr/bin/env dart
 
 import 'dart:io';
-import 'package:noteboat/cli/cli_config_service.dart';
+import 'package:noteboat/config/config_repository.dart';
 import 'package:noteboat/cli/cli_note_service.dart';
 import 'package:noteboat/cli/cli_commands.dart';
 
@@ -27,8 +27,8 @@ Future<void> main(List<String> args) async {
   }
 
   // Initialize services for other commands
-  final configService = CliConfigService();
-  final noteService = CliNoteService(configService);
+  final configRepository = ConfigRepository();
+  final noteService = CliNoteService(configRepository);
   await noteService.initialize();
 
   // Handle commands

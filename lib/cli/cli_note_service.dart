@@ -1,21 +1,21 @@
 import 'dart:io';
 import '../models/note.dart';
 import '../services/file_service.dart';
-import 'cli_config_service.dart';
+import '../config/config_repository.dart';
 
 /// Pure Dart note service for CLI commands (no Flutter dependencies)
 class CliNoteService {
-  final CliConfigService _configService;
+  final ConfigRepository _configRepository;
   final List<Note> _notes = [];
   bool _initialized = false;
 
-  CliNoteService(this._configService);
+  CliNoteService(this._configRepository);
 
   /// Initialize by loading all notes from configured directories
   Future<void> initialize() async {
     if (_initialized) return;
 
-    final directories = await _configService.getNotesDirectories();
+    final directories = await _configRepository.getAllDirectories();
 
     for (final directory in directories) {
       final dir = Directory(directory);
