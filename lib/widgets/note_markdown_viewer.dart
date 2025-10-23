@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/gestures.dart';
-import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:markdown_widget/markdown_widget.dart';
 import 'package:markdown/markdown.dart' as md;
 import '../utils/markdown_link_helper.dart';
 import '../utils/text_helper.dart';
@@ -37,134 +36,162 @@ class NoteMarkdownViewer extends StatelessWidget {
       existingNoteTitles: existingNoteTitles,
     );
 
-    // Start with theme-based stylesheet and customize with user font size
-    final baseStyleSheet = MarkdownStyleSheet.fromTheme(Theme.of(context));
-    final styleSheet = baseStyleSheet.copyWith(
-      // Paragraph text
-      p: baseStyleSheet.p?.copyWith(fontSize: baseFontSize) ?? TextStyle(fontSize: baseFontSize),
-
-      // Headings with clear visual hierarchy
-      h1: TextStyle(
-        fontSize: baseFontSize * 2.5,
-        fontWeight: FontWeight.w900,
-        height: 1.3,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-      h1Padding: const EdgeInsets.only(top: 24, bottom: 12),
-
-      h2: TextStyle(
-        fontSize: baseFontSize * 2.0,
-        fontWeight: FontWeight.w700,
-        height: 1.3,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-      h2Padding: const EdgeInsets.only(top: 20, bottom: 10),
-
-      h3: TextStyle(
-        fontSize: baseFontSize * 1.5,
-        fontWeight: FontWeight.w700,
-        height: 1.3,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-      h3Padding: const EdgeInsets.only(top: 16, bottom: 8),
-
-      h4: TextStyle(
-        fontSize: baseFontSize * 1.25,
-        fontWeight: FontWeight.w600,
-        height: 1.3,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-      h4Padding: const EdgeInsets.only(top: 14, bottom: 6),
-
-      h5: TextStyle(
-        fontSize: baseFontSize * 1.1,
-        fontWeight: FontWeight.w600,
-        height: 1.3,
-        color: Theme.of(context).colorScheme.onSurface,
-      ),
-      h5Padding: const EdgeInsets.only(top: 12, bottom: 4),
-
-      h6: TextStyle(
-        fontSize: baseFontSize,
-        fontWeight: FontWeight.w600,
-        height: 1.3,
-        color: Theme.of(context).colorScheme.onSurfaceVariant,
-      ),
-      h6Padding: const EdgeInsets.only(top: 12, bottom: 4),
-
-      // Other elements
-      code: baseStyleSheet.code?.copyWith(
-        fontSize: baseFontSize * 0.9,
-      ),
-      listBullet: baseStyleSheet.listBullet?.copyWith(fontSize: baseFontSize),
-      tableBody: baseStyleSheet.tableBody?.copyWith(fontSize: baseFontSize),
+    // Create custom link generator that colors links based on whether note exists
+    final linkGenerator = _CustomLinkGenerator(
+      existingNoteTitles: existingNoteTitles,
+      onNoteLinkTap: onNoteLinkTap,
+      onTagTap: onTagTap,
+      baseFontSize: baseFontSize,
     );
 
-    final markdownBody = MarkdownBody(
-      data: processedText,
-      selectable: false,  // Let SelectionArea handle selection instead
-      styleSheet: styleSheet,
-      onTapLink: (String text, String? href, String title) {
-        if (href == null) return;
-
-        // Determine link type and handle accordingly
-        if (href.startsWith('http://') || href.startsWith('https://')) {
-          // External URL
-          MarkdownLinkHelper.openUrl(href);
-        } else if (href.startsWith('#')) {
-          // Hashtag
-          final tag = href.substring(1);
-          onTagTap?.call(tag);
-        } else {
-          // Note link - decode URL encoding
-          String decodedHref;
-          try {
-            decodedHref = Uri.decodeComponent(href);
-          } catch (e) {
-            decodedHref = href;
-          }
-          onNoteLinkTap?.call(decodedHref);
-        }
-      },
-      builders: {
-        'a': NoteLinkBuilder(
-          existingNoteTitles: existingNoteTitles,
-          baseFontSize: baseFontSize,
+    // Configure markdown rendering with custom typography
+    final config = MarkdownConfig(
+      configs: [
+        // Headings with clear visual hierarchy
+        H1Config(
+          style: TextStyle(
+            fontSize: baseFontSize * 2.5,
+            fontWeight: FontWeight.w900,
+            height: 1.3,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
         ),
-      },
+        H2Config(
+          style: TextStyle(
+            fontSize: baseFontSize * 2.0,
+            fontWeight: FontWeight.w700,
+            height: 1.3,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        H3Config(
+          style: TextStyle(
+            fontSize: baseFontSize * 1.5,
+            fontWeight: FontWeight.w700,
+            height: 1.3,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        H4Config(
+          style: TextStyle(
+            fontSize: baseFontSize * 1.25,
+            fontWeight: FontWeight.w600,
+            height: 1.3,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        H5Config(
+          style: TextStyle(
+            fontSize: baseFontSize * 1.1,
+            fontWeight: FontWeight.w600,
+            height: 1.3,
+            color: Theme.of(context).colorScheme.onSurface,
+          ),
+        ),
+        H6Config(
+          style: TextStyle(
+            fontSize: baseFontSize,
+            fontWeight: FontWeight.w600,
+            height: 1.3,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
+        ),
+        PConfig(
+          textStyle: TextStyle(fontSize: baseFontSize),
+        ),
+        CodeConfig(
+          style: TextStyle(fontSize: baseFontSize * 0.9),
+        ),
+      ],
+    );
+
+    final markdownGenerator = MarkdownGenerator(
+      generators: [
+        SpanNodeGeneratorWithTag(
+          tag: 'a',
+          generator: linkGenerator.generateLinkNode,
+        ),
+      ],
+    );
+
+    final markdownWidget = MarkdownWidget(
+      data: processedText,
+      config: config,
+      markdownGenerator: markdownGenerator,
+      shrinkWrap: true,
+      selectable: false,  // Let SelectionArea handle selection
+      padding: EdgeInsets.zero,
     );
 
     // Wrap in SelectionArea to enable continuous multi-line selection
     if (selectable) {
-      return SelectionArea(child: markdownBody);
+      return SelectionArea(child: markdownWidget);
     } else {
-      return markdownBody;
+      return markdownWidget;
     }
   }
 }
 
-/// Custom link builder that styles links based on whether the target note exists
-/// Note: Currently returns null to avoid flutter_markdown duplicate rendering bug
-/// When returning a custom widget, flutter_markdown incorrectly renders both the
-/// widget AND remaining text children when link text is split into multiple nodes
-class NoteLinkBuilder extends MarkdownElementBuilder {
+/// Custom link generator that styles links based on whether the target note exists
+/// Uses markdown_widget's SpanNodeGenerator to provide per-link color customization
+class _CustomLinkGenerator {
   final Set<String> existingNoteTitles;
+  final Function(String noteTitle)? onNoteLinkTap;
+  final Function(String tag)? onTagTap;
   final double baseFontSize;
 
-  NoteLinkBuilder({
+  _CustomLinkGenerator({
     required this.existingNoteTitles,
+    this.onNoteLinkTap,
+    this.onTagTap,
     required this.baseFontSize,
   });
 
-  @override
-  Widget? visitElementAfter(md.Element element, TextStyle? preferredStyle) {
-    // Return null to let flutter_markdown handle rendering
-    // This avoids a bug where custom widgets cause duplicate text when
-    // link text contains multiple capitalized words (e.g., "Dumbing Of Age")
+  SpanNode generateLinkNode(md.Element element, MarkdownConfig config, WidgetVisitor visitor) {
+    // Extract href from the link element
+    final href = element.attributes['href'] ?? '';
 
-    // TODO: Find a way to customize link colors (red for non-existent notes)
-    // without triggering the duplicate rendering bug
+    // Determine link color based on type
+    Color linkColor;
+    VoidCallback? onTap;
 
-    return null;
+    if (href.startsWith('http://') || href.startsWith('https://')) {
+      // External URL - blue
+      linkColor = const Color(0xff0969da);
+      onTap = () => MarkdownLinkHelper.openUrl(href);
+    } else if (href.startsWith('#')) {
+      // Hashtag - blue
+      linkColor = const Color(0xff0969da);
+      final tag = href.substring(1);
+      onTap = () => onTagTap?.call(tag);
+    } else {
+      // Note link - check if it exists
+      String decodedHref;
+      try {
+        decodedHref = Uri.decodeComponent(href);
+      } catch (e) {
+        decodedHref = href;
+      }
+
+      // Red for non-existent notes, blue for existing notes
+      final noteExists = existingNoteTitles.contains(decodedHref);
+      linkColor = noteExists ? const Color(0xff0969da) : Colors.red;
+      onTap = () => onNoteLinkTap?.call(decodedHref);
+    }
+
+    // Create a custom LinkConfig with the determined color
+    final customLinkConfig = LinkConfig(
+      style: TextStyle(
+        color: linkColor,
+        decoration: TextDecoration.underline,
+        fontSize: baseFontSize,
+      ),
+      onTap: (_) {
+        onTap?.call();
+      },
+    );
+
+    // Return a LinkNode with the custom config
+    return LinkNode(element.attributes, customLinkConfig);
   }
 }
