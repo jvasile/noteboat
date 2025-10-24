@@ -101,6 +101,11 @@ void main() {
           reason: 'Should not have duplicate fragment');
 
       print('All duplicate text assertions PASSED!');
+
+      // Dispose widget tree to trigger visibility detector timer
+      await tester.pumpWidget(Container());
+      // Wait for timer to complete
+      await tester.pump(const Duration(milliseconds: 600));
     });
 
     testWidgets('renders headings', (WidgetTester tester) async {
@@ -122,6 +127,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(MarkdownWidget), findsOneWidget);
+
+      // Dispose widget tree to trigger visibility detector timer
+      await tester.pumpWidget(Container());
+      // Wait for timer to complete
+      await tester.pump(const Duration(milliseconds: 600));
     });
 
     testWidgets('renders code blocks', (WidgetTester tester) async {
@@ -144,6 +154,11 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.byType(MarkdownWidget), findsOneWidget);
+
+      // Dispose widget tree to trigger visibility detector timer
+      await tester.pumpWidget(Container());
+      // Wait for timer to complete
+      await tester.pump(const Duration(milliseconds: 600));
     });
   });
 
@@ -176,6 +191,11 @@ void main() {
       // This test just verifies LinkConfig works
       // Next step: investigate if we can apply different colors per link
       expect(find.byType(MarkdownWidget), findsOneWidget);
+
+      // Dispose widget tree to trigger visibility detector timer
+      await tester.pumpWidget(Container());
+      // Wait for timer to complete
+      await tester.pump(const Duration(milliseconds: 600));
     });
 
     testWidgets('explores custom link generator for per-link styling', (WidgetTester tester) async {
@@ -209,6 +229,11 @@ void main() {
       // TODO: Investigate markdown_widget's generator API
       // to see if we can return different colors based on href
       expect(find.byType(MarkdownWidget), findsOneWidget);
+
+      // Dispose widget tree to trigger visibility detector timer
+      await tester.pumpWidget(Container());
+      // Wait for timer to complete
+      await tester.pump(const Duration(milliseconds: 600));
     });
   });
 }
