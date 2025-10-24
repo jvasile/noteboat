@@ -24,4 +24,20 @@ class ConfigService {
   Future<List<String>> getAllDirectories() async {
     return _repository.getAllDirectories();
   }
+
+  Future<String?> validateDirectory(String dirPath) async {
+    return _repository.validateDirectory(dirPath);
+  }
+
+  Future<Map<String, String?>> validateAllDirectories() async {
+    return _repository.validateAllDirectories();
+  }
+
+  Future<bool> hasValidDirectory() async {
+    return _repository.hasValidDirectory();
+  }
+
+  Future<List<String>> getValidDirectories() async {
+    return _repository.getValidDirectories();
+  }
 }

@@ -279,19 +279,32 @@ class NoteService {
   }
 
   // Ensure "Help" note exists by copying from bundled asset
+  // This should only be called when no notes exist at all (i.e., user is starting fresh)
   Future<void> ensureHelpNote() async {
-    if (!await noteExists('Help')) {
-      // Load bundled Help.md file
-      final helpContent = await rootBundle.loadString('assets/Help.md');
-
-      // Write directly to notes directory
-      final writeDir = await configService.getWriteDirectory();
-      final helpPath = path.join(writeDir, 'Help.md');
-      await File(helpPath).writeAsString(helpContent);
-
-      // Reload notes to include the new Help.md
-      await reload();
+    // Only create Help note if no notes exist at all
+    final allNotes = await getAllNotes();
+    if (allNotes.isNotEmpty) {
+      // User has notes, don't create Help.md even if they deleted it
+      return;
     }
+
+    // Load bundled Help.md file
+    final helpContent = await rootBundle.loadString('assets/Help.md');
+
+    // Write directly to notes directory
+    final writeDir = await configService.getWriteDirectory();
+
+    // Ensure the directory exists before writing
+    final dir = Directory(writeDir);
+    if (!await dir.exists()) {
+      await dir.create(recursive: true);
+    }
+
+    final helpPath = path.join(writeDir, 'Help.md');
+    await File(helpPath).writeAsString(helpContent);
+
+    // Reload notes to include the new Help.md
+    await reload();
   }
 
   // Reload all notes from disk

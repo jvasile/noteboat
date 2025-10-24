@@ -36,6 +36,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   double _baseFontSize = 16.0;
   String _editorMode = 'basic';
   double _nvimFontSize = 16.0;
+  List<String> _directories = [];
+  Map<String, String?> _directoryValidation = {};
 
   @override
   void initState() {
@@ -78,6 +80,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _baseFontSize = config.baseFontSize;
       _editorMode = config.editorMode;
       _nvimFontSize = config.nvimFontSize;
+      _directories = List.from(config.directories);
       _newNoteController.text = config.hotkeys.newNote;
       _searchController.text = config.hotkeys.search;
       _editNoteController.text = config.hotkeys.editNote;
@@ -87,6 +90,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _moveDownController.text = config.hotkeys.moveDown;
       _closeDialogController.text = config.hotkeys.closeDialog;
       _isLoading = false;
+    });
+
+    // Validate directories
+    _validateDirectories();
+  }
+
+  Future<void> _validateDirectories() async {
+    final validation = await widget.configService.validateAllDirectories();
+    setState(() {
+      _directoryValidation = validation;
     });
   }
 
@@ -109,6 +122,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
     // Check if nvim font size changed
     final nvimFontSizeChanged = _nvimFontSize != _config!.nvimFontSize;
 
+    // Check if directories changed
+    final directoriesChanged = _directories.length != _config!.directories.length ||
+        !_directories.every((d) => _config!.directories.contains(d));
+
     // Check if hotkeys changed
     final hotkeysChanged =
       _newNoteController.text != _config!.hotkeys.newNote ||
@@ -120,7 +137,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
       _moveDownController.text != _config!.hotkeys.moveDown ||
       _closeDialogController.text != _config!.hotkeys.closeDialog;
 
-    return editorChanged || themeChanged || fontSizeChanged || editorModeChanged || nvimFontSizeChanged || hotkeysChanged;
+    return editorChanged || themeChanged || fontSizeChanged || editorModeChanged || nvimFontSizeChanged || directoriesChanged || hotkeysChanged;
   }
 
   Future<bool> _confirmDiscard() async {
@@ -147,11 +164,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Future<void> _saveConfig() async {
     if (_config == null) return;
 
+    // Validate that at least one directory is valid
+    final validDirs = _directories.where((dir) =>
+      dir.trim().isNotEmpty &&
+      (_directoryValidation[dir] == null || _directoryValidation[dir]!.isEmpty)
+    ).toList();
+
+    if (validDirs.isEmpty) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Cannot save: At least one valid directory is required'),
+            duration: Duration(seconds: 5),
+          ),
+        );
+      }
+      return;
+    }
+
     setState(() => _isSaving = true);
 
     try {
       final updatedConfig = AppConfig(
-        directories: _config!.directories,
+        directories: _directories.where((d) => d.trim().isNotEmpty).toList(),
         defaultEditor: _editorController.text.trim(),
         themeMode: _config!.themeMode,
         baseFontSize: _baseFontSize,
@@ -402,7 +437,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         SizedBox(
                           width: 40,
                           child: Text(
-                            '${_nvimFontSize.toStringAsFixed(0)}',
+                            _nvimFontSize.toStringAsFixed(0),
                             style: Theme.of(context).textTheme.bodyLarge,
                           ),
                         ),
@@ -448,7 +483,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       SizedBox(
                         width: 40,
                         child: Text(
-                          '${_baseFontSize.toStringAsFixed(0)}',
+                          _baseFontSize.toStringAsFixed(0),
                           style: Theme.of(context).textTheme.bodyLarge,
                         ),
                       ),
@@ -558,26 +593,122 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   const Divider(),
                   const SizedBox(height: 16),
 
-                  Text(
-                    'Storage',
-                    style: Theme.of(context).textTheme.titleLarge,
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      Text(
+                        'Storage',
+                        style: Theme.of(context).textTheme.titleLarge,
+                      ),
+                      Row(
+                        children: [
+                          FilledButton.icon(
+                            onPressed: _validateDirectories,
+                            icon: const Icon(Icons.check_circle_outline, size: 18),
+                            label: const Text('Validate'),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton.icon(
+                            onPressed: () {
+                              setState(() {
+                                _directories.add('');
+                              });
+                            },
+                            icon: const Icon(Icons.add, size: 18),
+                            label: const Text('Add Directory'),
+                            style: FilledButton.styleFrom(
+                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    'Notes Directory',
-                    style: Theme.of(context).textTheme.titleSmall,
+                    'Configure where notes are stored. At least one valid directory is required.',
+                    style: Theme.of(context).textTheme.bodyMedium,
                   ),
-                  const SizedBox(height: 4),
-                  if (_config != null)
-                    ...(_config!.directories.map((dir) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Text(
-                            dir,
-                            style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                                  fontFamily: 'monospace',
+                  const SizedBox(height: 16),
+                  ..._directories.asMap().entries.map((entry) {
+                    final index = entry.key;
+                    final dir = entry.value;
+                    final error = _directoryValidation[dir];
+                    final isValid = error == null;
+
+                    return Card(
+                      margin: const EdgeInsets.only(bottom: 12),
+                      color: isValid
+                          ? Theme.of(context).colorScheme.surfaceContainerHighest
+                          : Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Icon(
+                                  isValid ? Icons.check_circle : Icons.error_outline,
+                                  color: isValid
+                                      ? Theme.of(context).colorScheme.primary
+                                      : Theme.of(context).colorScheme.error,
+                                  size: 20,
                                 ),
-                          ),
-                        ))),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: TextField(
+                                    controller: TextEditingController(text: dir)
+                                      ..selection = TextSelection.collapsed(
+                                        offset: dir.length,
+                                      ),
+                                    onChanged: (value) {
+                                      setState(() {
+                                        _directories[index] = value;
+                                        _directoryValidation.remove(dir);
+                                      });
+                                    },
+                                    decoration: const InputDecoration(
+                                      hintText: '/path/to/notes',
+                                      border: OutlineInputBorder(),
+                                      isDense: true,
+                                    ),
+                                    style: const TextStyle(fontFamily: 'monospace', fontSize: 13),
+                                  ),
+                                ),
+                                const SizedBox(width: 8),
+                                IconButton(
+                                  icon: const Icon(Icons.delete),
+                                  tooltip: 'Remove',
+                                  onPressed: _directories.length > 1
+                                      ? () {
+                                          setState(() {
+                                            _directories.removeAt(index);
+                                            _directoryValidation.remove(dir);
+                                          });
+                                        }
+                                      : null,
+                                ),
+                              ],
+                            ),
+                            if (!isValid) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                error ?? 'Unknown error',
+                                style: TextStyle(
+                                  color: Theme.of(context).colorScheme.error,
+                                  fontSize: 12,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
                   const SizedBox(height: 16),
                   Card(
                     color: Theme.of(context).colorScheme.surfaceContainerHighest,

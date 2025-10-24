@@ -1,9 +1,8 @@
 import 'package:flutter/material.dart';
 import 'services/config_service.dart';
 import 'services/note_service.dart';
-import 'screens/view_screen.dart';
-import 'screens/edit_screen.dart';
 import 'screens/list_view_screen.dart';
+import 'screens/directory_setup_screen.dart';
 import 'types/types.dart'; // Import early to ensure type registration
 
 export 'services/config_service.dart' show AppConfig;
@@ -136,13 +135,47 @@ class _NoteboatHomeState extends State<NoteboatHome> {
     try {
       // Initialize services
       final configService = ConfigService();
+
+      // Check if we have at least one valid directory
+      final hasValidDir = await configService.hasValidDirectory();
+
+      if (!hasValidDir) {
+        // No valid directories - show directory setup screen
+        setState(() => _isInitializing = false);
+
+        if (!mounted) return;
+
+        final invalidDirs = await configService.validateAllDirectories();
+        if (!mounted) return;
+
+        final result = await Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(
+            builder: (context) => DirectorySetupScreen(
+              configService: configService,
+              invalidDirectories: invalidDirs,
+            ),
+          ),
+        );
+
+        // If user successfully configured directories, restart initialization
+        if (result == true && mounted) {
+          _initializeApp();
+        }
+        return;
+      }
+
+      // We have valid directories, continue with normal initialization
       _noteService = NoteService(configService);
 
       // Load all notes
       await _noteService.initialize();
 
-      // Ensure Help note exists
-      await _noteService.ensureHelpNote();
+      // Ensure Help note exists if no notes exist at all
+      final allNotes = await _noteService.getAllNotes();
+      if (allNotes.isEmpty) {
+        await _noteService.ensureHelpNote();
+      }
 
       setState(() => _isInitializing = false);
 
@@ -164,7 +197,32 @@ class _NoteboatHomeState extends State<NoteboatHome> {
 
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error initializing app: $e')),
+          SnackBar(
+            content: Text('Error initializing app: $e'),
+            duration: const Duration(seconds: 10),
+            action: SnackBarAction(
+              label: 'Configure',
+              onPressed: () async {
+                final configService = ConfigService();
+                final invalidDirs = await configService.validateAllDirectories();
+                if (mounted) {
+                  final result = await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => DirectorySetupScreen(
+                        configService: configService,
+                        invalidDirectories: invalidDirs,
+                      ),
+                    ),
+                  );
+
+                  if (result == true && mounted) {
+                    _initializeApp();
+                  }
+                }
+              },
+            ),
+          ),
         );
       }
     }
