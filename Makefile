@@ -109,8 +109,20 @@ PREFIX ?= /usr/local
 INSTALL_DIR := $(PREFIX)/bin
 BUNDLE_INSTALL_DIR := /opt/noteboat
 
-install: $(GUI_TARGET) $(CLI_TARGET)
+install:
 	@echo "Installing noteboat..."
+	@# Check if build artifacts exist
+	@if [ ! -f "$(GUI_TARGET)" ] || [ ! -f "$(CLI_TARGET)" ]; then \
+		echo "Error: Build artifacts not found."; \
+		echo ""; \
+		echo "Please build the project first as a regular user:"; \
+		echo "  make"; \
+		echo ""; \
+		echo "Then run install with sudo:"; \
+		echo "  sudo make install"; \
+		echo ""; \
+		exit 1; \
+	fi
 	@echo "  Copying bundle to $(BUNDLE_INSTALL_DIR)..."
 	install -d $(BUNDLE_INSTALL_DIR)
 	cp -r $(BUILD_DIR)/* $(BUNDLE_INSTALL_DIR)/
@@ -159,7 +171,8 @@ help:
 	@echo "  MODE=debug        - Debug build with symbols"
 	@echo ""
 	@echo "Installation (Linux only):"
-	@echo "  sudo make install           # Install to /opt/noteboat and /usr/local/bin"
+	@echo "  make                        # Build first as regular user"
+	@echo "  sudo make install           # Then install to /opt/noteboat and /usr/local/bin"
 	@echo "  sudo make install PREFIX=/  # Install to /opt/noteboat and /bin"
 	@echo ""
 	@echo "Examples:"
