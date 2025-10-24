@@ -99,6 +99,10 @@ class NoteMarkdownViewer extends StatelessWidget {
         PConfig(
           textStyle: TextStyle(fontSize: baseFontSize),
         ),
+        PreConfig(
+          textStyle: TextStyle(fontSize: baseFontSize * 0.9),
+          language: '', // Empty language to avoid errors with code blocks without language specifiers
+        ),
         CodeConfig(
           style: TextStyle(fontSize: baseFontSize * 0.9),
         ),
