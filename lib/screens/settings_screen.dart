@@ -1,6 +1,7 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../services/config_service.dart';
 
 class SettingsScreen extends StatefulWidget {
@@ -356,9 +357,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   const SizedBox(height: 8),
                   Text(
-                    Platform.isLinux || Platform.isMacOS
-                        ? 'Choose between basic editor or Neovim'
-                        : 'Neovim is only available on Linux/macOS',
+                    kIsWeb
+                        ? 'Neovim is not available on web (basic editor only)'
+                        : (Platform.isLinux || Platform.isMacOS
+                            ? 'Choose between basic editor or Neovim'
+                            : 'Neovim is only available on Linux/macOS'),
                     style: Theme.of(context).textTheme.bodyMedium,
                   ),
                   const SizedBox(height: 16),
@@ -373,7 +376,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         value: 'nvim',
                         label: const Text('Neovim'),
                         icon: const Icon(Icons.terminal),
-                        enabled: Platform.isLinux || Platform.isMacOS,
+                        enabled: !kIsWeb && (Platform.isLinux || Platform.isMacOS),
                       ),
                     ],
                     selected: {_editorMode},
@@ -383,7 +386,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       });
                     },
                   ),
-                  if (_editorMode == 'nvim' && (Platform.isLinux || Platform.isMacOS)) ...[
+                  if (_editorMode == 'nvim' && !kIsWeb && (Platform.isLinux || Platform.isMacOS)) ...[
                     Padding(
                       padding: const EdgeInsets.only(top: 12.0),
                       child: Card(

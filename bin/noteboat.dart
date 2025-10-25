@@ -26,6 +26,12 @@ Future<void> main(List<String> args) async {
     return;
   }
 
+  // Handle serve command separately (doesn't need note service)
+  if (command == 'serve') {
+    await handleServeCommand(args);
+    return;
+  }
+
   // Initialize services for other commands
   final configRepository = ConfigRepository();
   final noteService = CliNoteService(configRepository);

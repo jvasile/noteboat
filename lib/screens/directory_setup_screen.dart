@@ -1,4 +1,5 @@
 import 'dart:io' show Platform;
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'package:path/path.dart' as path;
 import '../services/config_service.dart';
@@ -39,17 +40,27 @@ class _DirectorySetupScreenState extends State<DirectorySetupScreen> {
   }
 
   String _getDefaultDirectory() {
-    final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
-    if (home == null) {
-      return '';
+    // On web, use a virtual path
+    if (kIsWeb) {
+      return '/noteboat/notes';
     }
 
-    if (Platform.isLinux || Platform.isMacOS) {
-      return path.join(home, 'noteboat', 'notes');
-    } else if (Platform.isWindows) {
-      return path.join(home, 'Documents', 'noteboat', 'notes');
-    } else {
-      return path.join(home, 'noteboat', 'notes');
+    try {
+      final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+      if (home == null) {
+        return '';
+      }
+
+      if (Platform.isLinux || Platform.isMacOS) {
+        return path.join(home, 'noteboat', 'notes');
+      } else if (Platform.isWindows) {
+        return path.join(home, 'Documents', 'noteboat', 'notes');
+      } else {
+        return path.join(home, 'noteboat', 'notes');
+      }
+    } catch (e) {
+      // Fallback for web or any other platform issues
+      return '/noteboat/notes';
     }
   }
 

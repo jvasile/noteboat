@@ -9,10 +9,33 @@ import 'app_config.dart';
 class ConfigRepository {
   AppConfig? _cachedConfig;
 
+  /// Check if we're on web by trying to access Platform
+  static bool _isWeb() {
+    try {
+      // Try to access Platform.environment - this will throw on web
+      // ignore: unnecessary_statements
+      Platform.environment;
+      return false;
+    } on UnsupportedError {
+      return true;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  /// Get home directory in a web-safe way
+  static String? _getHomeDirectory() {
+    if (_isWeb()) {
+      // On web, there's no home directory - use a default path
+      return '/noteboat';
+    }
+    return Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+  }
+
   /// Expand tilde (~) in paths to the actual home directory
   static String expandPath(String pathStr) {
     if (pathStr.startsWith('~/')) {
-      final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+      final home = _getHomeDirectory();
       if (home != null) {
         return pathStr.replaceFirst('~', home);
       }
@@ -55,6 +78,11 @@ class ConfigRepository {
   /// Returns null if valid, error message if invalid
   Future<String?> validateDirectory(String dirPath) async {
     try {
+      // On web, directories are virtual - always valid
+      if (_isWeb()) {
+        return null; // Web uses browser storage, no validation needed
+      }
+
       // Expand tilde in path
       final expandedPath = expandPath(dirPath);
       final dir = Directory(expandedPath);
@@ -165,14 +193,17 @@ hotkeys:
 
   /// Create default configuration with platform-appropriate defaults
   AppConfig _createDefaultConfig() {
-    final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
+    final home = _getHomeDirectory();
     if (home == null) {
       throw Exception('Could not determine home directory');
     }
 
     // Use consistent default directory across CLI and GUI
     String defaultNotesDir;
-    if (Platform.isLinux || Platform.isMacOS) {
+    if (_isWeb()) {
+      // On web, use a virtual path (browser storage)
+      defaultNotesDir = '/noteboat/notes';
+    } else if (Platform.isLinux || Platform.isMacOS) {
       defaultNotesDir = path.join(home, 'noteboat', 'notes');
     } else if (Platform.isWindows) {
       defaultNotesDir = path.join(home, 'Documents', 'noteboat', 'notes');
@@ -180,10 +211,12 @@ hotkeys:
       defaultNotesDir = path.join(home, 'noteboat', 'notes');
     }
 
-    // Create default notes directory if it doesn't exist
-    final dir = Directory(defaultNotesDir);
-    if (!dir.existsSync()) {
-      dir.createSync(recursive: true);
+    // Create default notes directory if it doesn't exist (not on web)
+    if (!_isWeb()) {
+      final dir = Directory(defaultNotesDir);
+      if (!dir.existsSync()) {
+        dir.createSync(recursive: true);
+      }
     }
 
     return AppConfig(

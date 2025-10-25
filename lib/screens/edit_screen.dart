@@ -1,12 +1,15 @@
 import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import '../models/note.dart';
 import '../services/note_service.dart';
 import '../services/config_service.dart';
 import '../utils/hotkey_helper.dart';
 import '../widgets/note_markdown_viewer.dart';
-import '../widgets/nvim_editor.dart';
+// Conditional import: use stub on web, real nvim_editor on native platforms
+import '../widgets/nvim_editor_stub.dart'
+    if (dart.library.io) '../widgets/nvim_editor.dart';
 
 class EditScreen extends StatefulWidget {
   final NoteService noteService;
@@ -59,8 +62,9 @@ class _EditScreenState extends State<EditScreen> {
         _hotkeys = config.hotkeys;
         _editorMode = config.editorMode;
         _nvimFontSize = config.nvimFontSize;
-        // Only use nvim if configured AND on Linux/macOS
-        _useNvim = _editorMode == 'nvim' &&
+        // Only use nvim if configured AND on Linux/macOS (not on web)
+        _useNvim = !kIsWeb &&
+                   _editorMode == 'nvim' &&
                    (Platform.isLinux || Platform.isMacOS);
       });
     }

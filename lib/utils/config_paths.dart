@@ -6,6 +6,22 @@ import 'package:path/path.dart' as path;
 class ConfigPaths {
   static const String configFileName = 'noteboat_config.yaml';
 
+  /// Check if we're running on web by checking if Platform.environment is available
+  static bool _isWeb() {
+    try {
+      // Try to access Platform.environment - this will throw on web
+      // ignore: unnecessary_statements
+      Platform.environment;
+      return false;
+    } on UnsupportedError {
+      // UnsupportedError means we're on web
+      return true;
+    } catch (e) {
+      // Any other error, assume not web
+      return false;
+    }
+  }
+
   /// Get all possible config file locations in order of preference
   /// Returns the first one that exists, or the primary location if none exist
   static Future<String> getConfigFilePath() async {
@@ -25,6 +41,11 @@ class ConfigPaths {
 
   /// Get all possible config file locations in order of preference
   static List<String> _getConfigCandidates() {
+    // On web, use a simple fixed path
+    if (_isWeb()) {
+      return ['/noteboat/$configFileName'];
+    }
+
     final home = Platform.environment['HOME'] ?? Platform.environment['USERPROFILE'];
     if (home == null) {
       throw Exception('Could not determine home directory');
@@ -70,6 +91,11 @@ class ConfigPaths {
 
   /// Ensure the config directory exists
   static Future<void> ensureConfigDirectoryExists(String configFilePath) async {
+    // On web, directories are virtual - no need to create
+    if (_isWeb()) {
+      return;
+    }
+
     final dir = Directory(path.dirname(configFilePath));
     if (!await dir.exists()) {
       await dir.create(recursive: true);

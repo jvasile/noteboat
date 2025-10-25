@@ -1,9 +1,12 @@
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
 import 'services/config_service.dart';
 import 'services/note_service.dart';
+import 'services/help_note_initializer.dart';
 import 'screens/list_view_screen.dart';
 import 'screens/directory_setup_screen.dart';
 import 'types/types.dart'; // Import early to ensure type registration
+import 'version.dart'; // Generated at build time
 
 export 'services/config_service.dart' show AppConfig;
 
@@ -122,6 +125,7 @@ class NoteboatHome extends StatefulWidget {
 class _NoteboatHomeState extends State<NoteboatHome> {
   late NoteService _noteService;
   bool _isInitializing = true;
+  bool _hasError = false;
 
   @override
   void initState() {
@@ -130,42 +134,49 @@ class _NoteboatHomeState extends State<NoteboatHome> {
   }
 
   Future<void> _initializeApp() async {
-    setState(() => _isInitializing = true);
+    setState(() {
+      _isInitializing = true;
+      _hasError = false;
+    });
 
     try {
       // Initialize services
       final configService = ConfigService();
 
-      // Check if we have at least one valid directory
-      final hasValidDir = await configService.hasValidDirectory();
+      // On web, skip directory validation (uses HTTP repository)
+      if (!kIsWeb) {
+        // Check if we have at least one valid directory (desktop only)
+        final hasValidDir = await configService.hasValidDirectory();
 
-      if (!hasValidDir) {
-        // No valid directories - show directory setup screen
-        setState(() => _isInitializing = false);
+        if (!hasValidDir) {
+          // No valid directories - show directory setup screen
+          setState(() => _isInitializing = false);
 
-        if (!mounted) return;
+          if (!mounted) return;
 
-        final invalidDirs = await configService.validateAllDirectories();
-        if (!mounted) return;
+          final invalidDirs = await configService.validateAllDirectories();
+          if (!mounted) return;
 
-        final result = await Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(
-            builder: (context) => DirectorySetupScreen(
-              configService: configService,
-              invalidDirectories: invalidDirs,
+          final result = await Navigator.pushReplacement(
+            context,
+            MaterialPageRoute(
+              builder: (context) => DirectorySetupScreen(
+                configService: configService,
+                invalidDirectories: invalidDirs,
+              ),
             ),
-          ),
-        );
+          );
 
-        // If user successfully configured directories, restart initialization
-        if (result == true && mounted) {
-          _initializeApp();
+          // If user successfully configured directories, restart initialization
+          if (result == true && mounted) {
+            _initializeApp();
+          }
+          return;
         }
-        return;
       }
 
-      // We have valid directories, continue with normal initialization
+      // We have valid directories (or we're on web), continue with normal initialization
+      // On web, NoteService will use HTTP repository via factory
       _noteService = NoteService(configService);
 
       // Load all notes
@@ -174,7 +185,7 @@ class _NoteboatHomeState extends State<NoteboatHome> {
       // Ensure Help note exists if no notes exist at all
       final allNotes = await _noteService.getAllNotes();
       if (allNotes.isEmpty) {
-        await _noteService.ensureHelpNote();
+        await HelpNoteInitializer.ensureHelpNote(_noteService);
       }
 
       setState(() => _isInitializing = false);
@@ -193,35 +204,78 @@ class _NoteboatHomeState extends State<NoteboatHome> {
         );
       }
     } catch (e) {
-      setState(() => _isInitializing = false);
+      setState(() {
+        _isInitializing = false;
+        _hasError = true;
+      });
 
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(
-            content: Text('Error initializing app: $e'),
-            duration: const Duration(seconds: 10),
-            action: SnackBarAction(
-              label: 'Configure',
-              onPressed: () async {
-                final configService = ConfigService();
-                final invalidDirs = await configService.validateAllDirectories();
-                if (mounted) {
-                  final result = await Navigator.push(
-                    context,
-                    MaterialPageRoute(
-                      builder: (context) => DirectorySetupScreen(
-                        configService: configService,
-                        invalidDirectories: invalidDirs,
-                      ),
-                    ),
-                  );
-
-                  if (result == true && mounted) {
-                    _initializeApp();
-                  }
-                }
-              },
+        // Show error dialog instead of snackbar for better visibility
+        showDialog(
+          context: context,
+          barrierDismissible: false,
+          builder: (context) => AlertDialog(
+            title: Row(
+              children: [
+                Icon(Icons.error_outline, color: Theme.of(context).colorScheme.error),
+                const SizedBox(width: 12),
+                const Text('Initialization Error'),
+              ],
             ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'The application failed to initialize:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 12),
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Theme.of(context).colorScheme.errorContainer.withValues(alpha: 0.3),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: SelectableText(
+                    e.toString(),
+                    style: const TextStyle(fontFamily: 'monospace'),
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () async {
+                  Navigator.of(context).pop();
+                  final configService = ConfigService();
+                  final invalidDirs = await configService.validateAllDirectories();
+                  if (mounted) {
+                    final result = await Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => DirectorySetupScreen(
+                          configService: configService,
+                          invalidDirectories: invalidDirs,
+                        ),
+                      ),
+                    );
+
+                    if (result == true && mounted) {
+                      _initializeApp();
+                    }
+                  }
+                },
+                child: const Text('Configure Directories'),
+              ),
+              FilledButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _initializeApp(); // Retry
+                },
+                child: const Text('Retry'),
+              ),
+            ],
           ),
         );
       }
@@ -249,13 +303,49 @@ class _NoteboatHomeState extends State<NoteboatHome> {
             ),
             const SizedBox(height: 8),
             const Text('Linked Notes'),
+            const SizedBox(height: 16),
+            Text(
+              'v$appVersion',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+            ),
+            Text(
+              'Built: $buildTimestamp',
+              style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.6),
+                  ),
+            ),
             const SizedBox(height: 32),
-            if (_isInitializing)
+            if (_isInitializing && !_hasError)
               const Column(
                 children: [
                   CircularProgressIndicator(),
                   SizedBox(height: 16),
                   Text('Initializing...'),
+                ],
+              ),
+            if (_hasError && !_isInitializing)
+              Column(
+                children: [
+                  Icon(
+                    Icons.error_outline,
+                    size: 48,
+                    color: Theme.of(context).colorScheme.error,
+                  ),
+                  const SizedBox(height: 16),
+                  Text(
+                    'Initialization failed',
+                    style: TextStyle(
+                      color: Theme.of(context).colorScheme.error,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const SizedBox(height: 8),
+                  Text(
+                    'Please check the error dialog for details',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
                 ],
               ),
           ],

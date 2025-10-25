@@ -1,5 +1,4 @@
 import 'dart:io';
-import 'package:flutter/services.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 import '../models/note.dart';
@@ -9,7 +8,7 @@ import 'config_service.dart';
 import 'file_service.dart';
 
 class NoteService {
-  final ConfigService configService;
+  final ConfigService configService; // Public for HelpNoteInitializer
   final Map<String, List<Note>> _noteCache = {}; // Cache notes by title (lowercase) - can have duplicates
   final Map<String, Note> _noteCacheById = {}; // Cache notes by ID
   final Map<String, String> _noteFilePaths = {}; // Map ID -> file path
@@ -276,35 +275,6 @@ class NoteService {
     if (!_initialized) await initialize();
     final notes = _noteCache[title.toLowerCase()];
     return notes != null && notes.isNotEmpty;
-  }
-
-  // Ensure "Help" note exists by copying from bundled asset
-  // This should only be called when no notes exist at all (i.e., user is starting fresh)
-  Future<void> ensureHelpNote() async {
-    // Only create Help note if no notes exist at all
-    final allNotes = await getAllNotes();
-    if (allNotes.isNotEmpty) {
-      // User has notes, don't create Help.md even if they deleted it
-      return;
-    }
-
-    // Load bundled Help.md file
-    final helpContent = await rootBundle.loadString('assets/Help.md');
-
-    // Write directly to notes directory
-    final writeDir = await configService.getWriteDirectory();
-
-    // Ensure the directory exists before writing
-    final dir = Directory(writeDir);
-    if (!await dir.exists()) {
-      await dir.create(recursive: true);
-    }
-
-    final helpPath = path.join(writeDir, 'Help.md');
-    await File(helpPath).writeAsString(helpContent);
-
-    // Reload notes to include the new Help.md
-    await reload();
   }
 
   // Reload all notes from disk

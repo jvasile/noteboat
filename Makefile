@@ -21,7 +21,7 @@ GUI_TARGET := $(BUILD_DIR)/noteboat-gui
 DART_SOURCES := $(shell find lib bin -name '*.dart' 2>/dev/null)
 OTHER_SOURCES := pubspec.yaml pubspec.lock linux/CMakeLists.txt
 
-.PHONY: all clean test help debug release install uninstall windows windows-debug windows-release windows-installer windows-installer-debug windows-installer-release
+.PHONY: all clean test help debug release install uninstall windows windows-debug windows-release windows-installer windows-installer-debug windows-installer-release web web-debug web-release
 
 # Default target
 all: $(GUI_TARGET) $(CLI_TARGET)
@@ -55,6 +55,8 @@ windows-release:
 	$(MAKE) MODE=release windows
 
 $(WIN_GUI_TARGET): $(DART_SOURCES) $(OTHER_SOURCES)
+	@echo "Generating version info..."
+	@./scripts/generate_version.sh $(MODE)
 	@echo "Building Flutter GUI for Windows as noteboat-gui.exe ($(MODE) mode)..."
 	$(FLUTTER) build windows $(WIN_FLUTTER_FLAGS)
 	@if [ -f "$(WIN_BUILD_DIR)/noteboat.exe" ]; then \
@@ -81,8 +83,45 @@ windows-installer-debug:
 windows-installer-release:
 	$(MAKE) MODE=release windows-installer
 
+# Web build configuration
+WEB_BUILD_DIR := build/web
+
+# NOTE: Web builds use conditional imports to exclude nvim_editor (which requires dart:ffi).
+# On web, only the basic editor is available. Nvim mode is automatically disabled.
+
+# Web build targets
+web: web-release
+
+web-debug:
+	@echo "Generating version info..."
+	@./scripts/generate_version.sh debug
+	@echo "Building Flutter web app (debug mode)..."
+	@echo "Note: Neovim editor mode is not available on web (basic editor only)."
+	$(FLUTTER) build web --debug
+	@echo "✓ Web app built in debug mode"
+	@echo "Output: $(WEB_BUILD_DIR)/"
+	@echo ""
+	@echo "To serve locally:"
+	@echo "  cd $(WEB_BUILD_DIR) && python3 -m http.server 8000"
+	@echo "  Then open: http://localhost:8000"
+
+web-release:
+	@echo "Generating version info..."
+	@./scripts/generate_version.sh release
+	@echo "Building Flutter web app (release mode)..."
+	@echo "Note: Neovim editor mode is not available on web (basic editor only)."
+	$(FLUTTER) build web --release
+	@echo "✓ Web app built in release mode"
+	@echo "Output: $(WEB_BUILD_DIR)/"
+	@echo ""
+	@echo "To serve locally:"
+	@echo "  cd $(WEB_BUILD_DIR) && python3 -m http.server 8000"
+	@echo "  Then open: http://localhost:8000"
+
 # Build GUI - depends on source files
 $(GUI_TARGET): $(DART_SOURCES) $(OTHER_SOURCES)
+	@echo "Generating version info..."
+	@./scripts/generate_version.sh $(MODE)
 	@echo "Building Flutter GUI as noteboat-gui ($(MODE) mode)..."
 	$(FLUTTER) build linux $(FLUTTER_FLAGS)
 	@echo "✓ Flutter GUI built"
@@ -159,6 +198,12 @@ help:
 	@echo "  make windows-installer      - Build and create MSIX installer (release mode)"
 	@echo "  make windows-installer-debug   - Build and create MSIX installer (debug mode)"
 	@echo ""
+	@echo "Web builds:"
+	@echo "  make web                    - Build web app in release mode (default)"
+	@echo "  make web-release            - Build web app in release mode"
+	@echo "  make web-debug              - Build web app in debug mode"
+	@echo "  Note: Neovim editor not available on web (basic editor only)"
+	@echo ""
 	@echo "Other targets:"
 	@echo "  make test         - Run test suite"
 	@echo "  make clean        - Remove build artifacts"
@@ -176,10 +221,11 @@ help:
 	@echo "  sudo make install PREFIX=/  # Install to /opt/noteboat and /bin"
 	@echo ""
 	@echo "Examples:"
-	@echo "  make                     # Linux release build"
-	@echo "  make debug               # Linux debug build"
-	@echo "  make windows             # Windows release build"
-	@echo "  make windows-installer   # Windows MSIX installer"
+	@echo "  make                              # Linux release build"
+	@echo "  make debug                        # Linux debug build"
+	@echo "  make windows                      # Windows release build"
+	@echo "  make windows-installer            # Windows MSIX installer"
+	@echo "  make web                          # Web release build"
 	@echo ""
 	@echo "Current mode: $(MODE)"
 	@echo ""
@@ -194,3 +240,9 @@ help:
 	@echo "  noteboat-gui.exe  - GUI executable"
 	@echo "  *.dll             - Flutter engine DLL files"
 	@echo "  data/             - Flutter assets"
+	@echo ""
+	@echo "Web output directory: $(WEB_BUILD_DIR)/"
+	@echo "  index.html        - Entry point"
+	@echo "  main.dart.js      - Compiled Dart code"
+	@echo "  flutter_service_worker.js - Service worker for PWA support"
+	@echo "  assets/           - Flutter assets"
