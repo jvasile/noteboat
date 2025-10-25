@@ -22,8 +22,8 @@ class AuthMiddleware {
           return innerHandler(request);
         }
 
-        // Allow health check without auth
-        if (request.url.path == 'api/health') {
+        // Allow health check and static files without auth
+        if (request.url.path == 'api/health' || !request.url.path.startsWith('api/')) {
           return innerHandler(request);
         }
 

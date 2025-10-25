@@ -1,13 +1,13 @@
 import 'dart:io';
+import 'package:riverpod/riverpod.dart';
 import 'package:shelf/shelf.dart';
 import 'package:shelf/shelf_io.dart' as io;
 import 'package:shelf_router/shelf_router.dart';
 import 'package:shelf_static/shelf_static.dart';
+import '../providers.dart';
 import '../server/api_handlers.dart';
 import '../server/auth_middleware.dart';
-import '../services/config_service.dart';
 import '../services/note_service.dart';
-import 'cli_note_service.dart';
 
 const String version = '1.0.0';
 
@@ -42,48 +42,6 @@ void printHelp() {
   print('  noteboat --version');
 }
 
-/// Handle 'list' command
-Future<void> handleListCommand(CliNoteService noteService) async {
-  final notes = await noteService.getAllNotes();
-
-  if (notes.isEmpty) {
-    print('No notes found.');
-    return;
-  }
-
-  print('All notes:');
-  for (final note in notes) {
-    final tagCount = note.tags.length;
-    final linkCount = note.links.length;
-    print('  ${note.title}: $tagCount tags, $linkCount links');
-  }
-}
-
-/// Handle 'search' command
-Future<void> handleSearchCommand(CliNoteService noteService, List<String> args) async {
-  if (args.length < 2) {
-    print('Usage: noteboat search <query terms...>');
-    return;
-  }
-
-  final query = args.sublist(1).join(' ');
-  final results = await noteService.searchNotes(query);
-
-  if (results.isEmpty) {
-    print('No notes found matching: $query');
-    return;
-  }
-
-  print('Found ${results.length} note(s):');
-  for (final note in results) {
-    final preview = note.text.length > 50
-        ? '${note.text.substring(0, 50)}...'
-        : note.text;
-    final cleanPreview = preview.replaceAll('\n', ' ');
-    print('  ${note.title}: $cleanPreview');
-  }
-}
-
 /// Handle 'serve' command
 Future<void> handleServeCommand(List<String> args) async {
   // Parse arguments
@@ -104,13 +62,13 @@ Future<void> handleServeCommand(List<String> args) async {
     }
   }
 
-  // Initialize NoteService
-  final configService = ConfigService();
-  final noteService = NoteService(configService);
+  // Initialize services using Riverpod
+  final container = ProviderContainer();
+  final noteService = container.read(noteServiceProvider);
   await noteService.initialize();
 
   // Create API handlers
-  final apiHandlers = ApiHandlers(noteService);
+  final apiHandlers = ApiHandlers(noteService as NoteService);
 
   // Create auth middleware
   final authMiddleware = AuthMiddleware(password: password);

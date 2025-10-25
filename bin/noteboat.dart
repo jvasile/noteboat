@@ -1,8 +1,8 @@
 #!/usr/bin/env dart
 
 import 'dart:io';
-import 'package:noteboat/config/config_repository.dart';
-import 'package:noteboat/cli/cli_note_service.dart';
+import 'package:riverpod/riverpod.dart';
+import 'package:noteboat/providers.dart';
 import 'package:noteboat/cli/cli_commands.dart';
 
 Future<void> main(List<String> args) async {
@@ -32,23 +32,54 @@ Future<void> main(List<String> args) async {
     return;
   }
 
-  // Initialize services for other commands
-  final configRepository = ConfigRepository();
-  final noteService = CliNoteService(configRepository);
-  await noteService.initialize();
+  // Initialize services using Riverpod
+  final container = ProviderContainer();
+  try {
+    final noteService = container.read(noteServiceProvider);
+    await noteService.initialize();
 
-  // Handle commands
-  switch (command) {
-    case 'list':
-      await handleListCommand(noteService);
-      break;
-    case 'search':
-      await handleSearchCommand(noteService, args);
-      break;
-    default:
-      print('Unknown command: $command');
-      printHelp();
-      exit(1);
+    // Handle commands
+    switch (command) {
+      case 'list':
+        final notes = await noteService.getAllNotes();
+        if (notes.isEmpty) {
+          print('No notes found.');
+        } else {
+          print('All notes:');
+          for (final note in notes) {
+            final tagCount = note.tags.length;
+            final linkCount = note.links.length;
+            print('  ${note.title}: $tagCount tags, $linkCount links');
+          }
+        }
+        break;
+      case 'search':
+        if (args.length < 2) {
+          print('Usage: noteboat search <query terms...>');
+          exit(1);
+        }
+        final query = args.sublist(1).join(' ');
+        final results = await noteService.searchNotes(query);
+        if (results.isEmpty) {
+          print('No notes found matching: $query');
+        } else {
+          print('Found ${results.length} note(s):');
+          for (final note in results) {
+            final preview = note.text.length > 50
+                ? '${note.text.substring(0, 50)}...'
+                : note.text;
+            final cleanPreview = preview.replaceAll('\n', ' ');
+            print('  ${note.title}: $cleanPreview');
+          }
+        }
+        break;
+      default:
+        print('Unknown command: $command');
+        printHelp();
+        exit(1);
+    }
+  } finally {
+    container.dispose();
   }
 }
 

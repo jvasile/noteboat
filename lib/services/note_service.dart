@@ -6,8 +6,9 @@ import '../utils/link_extractor.dart';
 import '../utils/tag_extractor.dart';
 import 'config_service.dart';
 import 'file_service.dart';
+import 'note_service_interface.dart';
 
-class NoteService {
+class NoteService implements INoteService {
   final ConfigService configService; // Public for HelpNoteInitializer
   final Map<String, List<Note>> _noteCache = {}; // Cache notes by title (lowercase) - can have duplicates
   final Map<String, Note> _noteCacheById = {}; // Cache notes by ID

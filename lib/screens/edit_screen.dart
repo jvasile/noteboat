@@ -2,30 +2,29 @@ import 'dart:io' show Platform;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/note.dart';
-import '../services/note_service.dart';
 import '../services/config_service.dart';
+import '../providers.dart';
 import '../utils/hotkey_helper.dart';
 import '../widgets/note_markdown_viewer.dart';
 // Conditional import: use stub on web, real nvim_editor on native platforms
 import '../widgets/nvim_editor_stub.dart'
     if (dart.library.io) '../widgets/nvim_editor.dart';
 
-class EditScreen extends StatefulWidget {
-  final NoteService noteService;
+class EditScreen extends ConsumerStatefulWidget {
   final Note note;
 
   const EditScreen({
     super.key,
-    required this.noteService,
     required this.note,
   });
 
   @override
-  State<EditScreen> createState() => _EditScreenState();
+  ConsumerState<EditScreen> createState() => _EditScreenState();
 }
 
-class _EditScreenState extends State<EditScreen> {
+class _EditScreenState extends ConsumerState<EditScreen> {
   late TextEditingController _titleController;
   late TextEditingController _textController;
   final FocusNode _textFocusNode = FocusNode();
@@ -56,7 +55,7 @@ class _EditScreenState extends State<EditScreen> {
   }
 
   Future<void> _loadConfig() async {
-    final config = await widget.noteService.configService.loadConfig();
+    final config = await ref.read(configServiceProvider).loadConfig();
     if (mounted) {
       setState(() {
         _hotkeys = config.hotkeys;
@@ -108,7 +107,7 @@ class _EditScreenState extends State<EditScreen> {
         text: text,
       );
 
-      await widget.noteService.saveNote(
+      await ref.read(noteServiceProvider).saveNote(
         updatedNote,
         existingTitle: _originalTitle != title ? _originalTitle : null,
       );

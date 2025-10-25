@@ -1,16 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/note.dart';
-import '../services/note_service.dart';
-import '../services/config_service.dart';
+import '../providers.dart';
 import '../types/types.dart';
+import '../services/config_service.dart';
+import '../services/note_service.dart';
 import '../utils/hotkey_helper.dart';
 import 'edit_screen.dart';
 import 'list_view_screen.dart';
 import 'settings_screen.dart';
 
-class ViewScreen extends StatefulWidget {
-  final NoteService noteService;
+class ViewScreen extends ConsumerStatefulWidget {
   final String? noteTitle;
   final String? noteId;
   final Function(ThemeMode)? onThemeChanged;
@@ -18,7 +19,6 @@ class ViewScreen extends StatefulWidget {
 
   const ViewScreen({
     super.key,
-    required this.noteService,
     this.noteTitle,
     this.noteId,
     this.onThemeChanged,
@@ -26,10 +26,10 @@ class ViewScreen extends StatefulWidget {
   }) : assert(noteTitle != null || noteId != null, 'Either noteTitle or noteId must be provided');
 
   @override
-  State<ViewScreen> createState() => _ViewScreenState();
+  ConsumerState<ViewScreen> createState() => _ViewScreenState();
 }
 
-class _ViewScreenState extends State<ViewScreen> {
+class _ViewScreenState extends ConsumerState<ViewScreen> {
   Note? _note;
   bool _isLoading = true;
   String? _error;
@@ -46,7 +46,7 @@ class _ViewScreenState extends State<ViewScreen> {
   }
 
   Future<void> _loadConfig() async {
-    final config = await widget.noteService.configService.loadConfig();
+    final config = await ref.read(configServiceProvider).loadConfig();
     if (mounted) {
       setState(() {
         _baseFontSize = config.baseFontSize;
@@ -56,7 +56,7 @@ class _ViewScreenState extends State<ViewScreen> {
   }
 
   Future<void> _loadExistingNoteTitles() async {
-    final notes = await widget.noteService.getAllNotes();
+    final notes = await ref.read(noteServiceProvider).getAllNotes();
     if (mounted) {
       setState(() {
         _existingNoteTitles = notes.map((note) => note.title).toSet();
@@ -75,10 +75,10 @@ class _ViewScreenState extends State<ViewScreen> {
 
       if (widget.noteId != null) {
         // Load by ID
-        note = await widget.noteService.getNoteById(widget.noteId!);
+        note = await ref.read(noteServiceProvider).getNoteById(widget.noteId!);
       } else if (widget.noteTitle != null) {
         // Load by title
-        note = await widget.noteService.getNoteByTitle(widget.noteTitle!);
+        note = await ref.read(noteServiceProvider).getNoteByTitle(widget.noteTitle!);
       }
 
       setState(() {
@@ -120,13 +120,12 @@ class _ViewScreenState extends State<ViewScreen> {
 
     // If ID is specified, navigate directly to that note
     if (specifiedId != null) {
-      final note = await widget.noteService.getNoteById(specifiedId);
+      final note = await ref.read(noteServiceProvider).getNoteById(specifiedId);
       if (note != null && mounted) {
         Navigator.push(
           context,
           MaterialPageRoute(
             builder: (context) => ViewScreen(
-              noteService: widget.noteService,
               noteId: note.id,
               onThemeChanged: widget.onThemeChanged,
               currentThemeMode: widget.currentThemeMode,
@@ -142,13 +141,13 @@ class _ViewScreenState extends State<ViewScreen> {
     }
 
     // No ID specified - check for multiple notes with same title
-    final notes = await widget.noteService.getNotesByTitle(title);
+    final notes = await ref.read(noteServiceProvider).getNotesByTitle(title);
 
     if (!mounted) return;
 
     if (notes.isEmpty) {
       // Note doesn't exist - create it and open in editor
-      final newNote = await widget.noteService.createNote(
+      final newNote = await ref.read(noteServiceProvider).createNote(
         title: title,
         text: '# $title\n\n',
         types: ['note'],
@@ -162,8 +161,8 @@ class _ViewScreenState extends State<ViewScreen> {
                 .getHandler(newNote.types)
                 .buildEditor(
                   context: context,
+              noteService: ref.read(noteServiceProvider) as NoteService,
                   note: newNote,
-                  noteService: widget.noteService,
                   onComplete: (saved) => Navigator.pop(context, saved),
                 ),
           ),
@@ -178,7 +177,6 @@ class _ViewScreenState extends State<ViewScreen> {
         context,
         MaterialPageRoute(
           builder: (context) => ViewScreen(
-            noteService: widget.noteService,
             noteId: notes.first.id,
             onThemeChanged: widget.onThemeChanged,
             currentThemeMode: widget.currentThemeMode,
@@ -231,7 +229,6 @@ class _ViewScreenState extends State<ViewScreen> {
                       context,
                       MaterialPageRoute(
                         builder: (context) => ViewScreen(
-                          noteService: widget.noteService,
                           noteId: note.id,
                           onThemeChanged: widget.onThemeChanged,
                           currentThemeMode: widget.currentThemeMode,
@@ -253,7 +250,6 @@ class _ViewScreenState extends State<ViewScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => ListViewScreen(
-          noteService: widget.noteService,
           initialSearchQuery: '#$tag',
           onThemeChanged: widget.onThemeChanged,
           currentThemeMode: widget.currentThemeMode,
@@ -271,8 +267,8 @@ class _ViewScreenState extends State<ViewScreen> {
               .getHandler(_note!.types)
               .buildEditor(
                 context: context,
+              noteService: ref.read(noteServiceProvider) as NoteService,
                 note: _note!,
-                noteService: widget.noteService,
                 onComplete: (saved) => Navigator.pop(context, saved),
               ),
         ),
@@ -294,7 +290,7 @@ class _ViewScreenState extends State<ViewScreen> {
 
     if (confirmed == true && mounted) {
       try {
-        await widget.noteService.deleteNoteById(_note!.id);
+        await ref.read(noteServiceProvider).deleteNoteById(_note!.id);
 
         if (mounted) {
           // Go back to previous view
@@ -318,7 +314,7 @@ class _ViewScreenState extends State<ViewScreen> {
     final result = await _showCreateNoteDialog();
     if (result != null && result.isNotEmpty) {
       // Check if note(s) with this title already exist
-      final existingNotes = await widget.noteService.getNotesByTitle(result);
+      final existingNotes = await ref.read(noteServiceProvider).getNotesByTitle(result);
 
       if (existingNotes.isNotEmpty) {
         // Note(s) with this title already exist
@@ -329,7 +325,6 @@ class _ViewScreenState extends State<ViewScreen> {
               context,
               MaterialPageRoute(
                 builder: (context) => EditScreen(
-                  noteService: widget.noteService,
                   note: existingNotes.first,
                 ),
               ),
@@ -345,7 +340,7 @@ class _ViewScreenState extends State<ViewScreen> {
         }
       } else {
         // Note doesn't exist - create it with specified type
-        final newNote = await widget.noteService.createNote(
+        final newNote = await ref.read(noteServiceProvider).createNote(
           title: result,
           text: '# $result\n\n',
           types: [noteType],
@@ -359,8 +354,8 @@ class _ViewScreenState extends State<ViewScreen> {
                   .getHandler(newNote.types)
                   .buildEditor(
                     context: context,
+              noteService: ref.read(noteServiceProvider) as NoteService,
                     note: newNote,
-                    noteService: widget.noteService,
                     onComplete: (saved) => Navigator.pop(context, saved),
                   ),
             ),
@@ -430,8 +425,8 @@ class _ViewScreenState extends State<ViewScreen> {
                             .getHandler(note.types)
                             .buildEditor(
                               context: context,
+              noteService: ref.read(noteServiceProvider) as NoteService,
                               note: note,
-                              noteService: widget.noteService,
                               onComplete: (saved) => Navigator.pop(context, saved),
                             ),
                       ),
@@ -525,7 +520,6 @@ class _ViewScreenState extends State<ViewScreen> {
               context,
               MaterialPageRoute(
                 builder: (context) => ListViewScreen(
-                  noteService: widget.noteService,
                   onThemeChanged: widget.onThemeChanged,
                   currentThemeMode: widget.currentThemeMode,
                 ),
@@ -549,7 +543,6 @@ class _ViewScreenState extends State<ViewScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => ListViewScreen(
-                      noteService: widget.noteService,
                       onThemeChanged: widget.onThemeChanged,
                       currentThemeMode: widget.currentThemeMode,
                     ),
@@ -577,7 +570,7 @@ class _ViewScreenState extends State<ViewScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => SettingsScreen(
-                      configService: widget.noteService.configService,
+                      configService: ref.read(configServiceProvider),
                       onThemeChanged: widget.onThemeChanged,
                       currentThemeMode: widget.currentThemeMode,
                     ),
@@ -619,7 +612,7 @@ class _ViewScreenState extends State<ViewScreen> {
                             .buildViewer(
                               context: context,
                               note: _note!,
-                              noteService: widget.noteService,
+                              noteService: ref.read(noteServiceProvider) as NoteService,
                               onNoteLinkTap: _navigateToNote,
                               onTagTap: _navigateToTagList,
                               onRefresh: _loadNote,

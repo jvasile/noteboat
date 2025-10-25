@@ -1,10 +1,13 @@
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'services/config_service.dart';
 import 'services/note_service.dart';
+import 'services/note_service_interface.dart';
 import 'services/help_note_initializer.dart';
 import 'screens/list_view_screen.dart';
 import 'screens/directory_setup_screen.dart';
+import 'providers.dart';
 import 'types/types.dart'; // Import early to ensure type registration
 import 'version.dart'; // Generated at build time
 
@@ -14,8 +17,12 @@ void main() async {
   // Ensure all note types are registered before starting the app
   ensureTypesRegistered();
 
-  // Run the GUI
-  runApp(const NoteboatApp());
+  // Run the GUI wrapped in ProviderScope
+  runApp(
+    const ProviderScope(
+      child: NoteboatApp(),
+    ),
+  );
 }
 
 class NoteboatApp extends StatefulWidget {
@@ -108,7 +115,7 @@ class _NoteboatAppState extends State<NoteboatApp> {
   }
 }
 
-class NoteboatHome extends StatefulWidget {
+class NoteboatHome extends ConsumerStatefulWidget {
   final Function(ThemeMode) onThemeChanged;
   final ThemeMode currentThemeMode;
 
@@ -119,11 +126,10 @@ class NoteboatHome extends StatefulWidget {
   });
 
   @override
-  State<NoteboatHome> createState() => _NoteboatHomeState();
+  ConsumerState<NoteboatHome> createState() => _NoteboatHomeState();
 }
 
-class _NoteboatHomeState extends State<NoteboatHome> {
-  late NoteService _noteService;
+class _NoteboatHomeState extends ConsumerState<NoteboatHome> {
   bool _isInitializing = true;
   bool _hasError = false;
 
@@ -140,8 +146,9 @@ class _NoteboatHomeState extends State<NoteboatHome> {
     });
 
     try {
-      // Initialize services
-      final configService = ConfigService();
+      // Get services from providers
+      final configService = ref.read(configServiceProvider);
+      final noteService = ref.read(noteServiceProvider);
 
       // On web, skip directory validation (uses HTTP repository)
       if (!kIsWeb) {
@@ -176,16 +183,15 @@ class _NoteboatHomeState extends State<NoteboatHome> {
       }
 
       // We have valid directories (or we're on web), continue with normal initialization
-      // On web, NoteService will use HTTP repository via factory
-      _noteService = NoteService(configService);
-
       // Load all notes
-      await _noteService.initialize();
+      await noteService.initialize();
 
-      // Ensure Help note exists if no notes exist at all
-      final allNotes = await _noteService.getAllNotes();
-      if (allNotes.isEmpty) {
-        await HelpNoteInitializer.ensureHelpNote(_noteService);
+      // Ensure Help note exists if no notes exist at all (desktop only)
+      if (!kIsWeb) {
+        final allNotes = await noteService.getAllNotes();
+        if (allNotes.isEmpty && noteService is NoteService) {
+          await HelpNoteInitializer.ensureHelpNote(noteService as NoteService);
+        }
       }
 
       setState(() => _isInitializing = false);
@@ -195,11 +201,7 @@ class _NoteboatHomeState extends State<NoteboatHome> {
         Navigator.pushReplacement(
           context,
           MaterialPageRoute(
-            builder: (context) => ListViewScreen(
-              noteService: _noteService,
-              onThemeChanged: widget.onThemeChanged,
-              currentThemeMode: widget.currentThemeMode,
-            ),
+            builder: (context) => const ListViewScreen(),
           ),
         );
       }
@@ -248,7 +250,7 @@ class _NoteboatHomeState extends State<NoteboatHome> {
               TextButton(
                 onPressed: () async {
                   Navigator.of(context).pop();
-                  final configService = ConfigService();
+                  final configService = ref.read(configServiceProvider);
                   final invalidDirs = await configService.validateAllDirectories();
                   if (mounted) {
                     final result = await Navigator.push(

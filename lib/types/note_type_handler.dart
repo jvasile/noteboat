@@ -123,13 +123,12 @@ class BaseNoteHandler extends NoteTypeHandler {
   Widget buildEditor({
     required BuildContext context,
     required Note note,
-    required NoteService noteService,
+    required NoteService noteService, // Not used - screens use Riverpod providers
     required Function(bool) onComplete,
   }) {
     // Return the existing EditScreen
     // We'll navigate to it rather than embedding it
     return EditScreen(
-      noteService: noteService,
       note: note,
     );
   }

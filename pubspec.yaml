@@ -63,11 +63,17 @@ dependencies:
 
   # For PTY/process management (nvim editor support)
   flutter_pty: ^0.4.2
+
+  # Server/HTTP dependencies
   shelf: ^1.4.2
   shelf_router: ^1.1.4
   shelf_static: ^1.1.3
   http: ^1.5.0
   crypto: ^3.0.6
+
+  # State management and dependency injection
+  flutter_riverpod: ^2.6.1
+  riverpod: ^2.6.1
 
 dev_dependencies:
   flutter_test:

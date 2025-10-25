@@ -1,33 +1,33 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/note.dart';
-import '../services/note_service.dart';
-import '../services/config_service.dart';
+import '../providers.dart';
 import '../types/types.dart';
+import '../services/config_service.dart';
+import '../services/note_service.dart';
 import '../utils/hotkey_helper.dart';
 import '../utils/text_helper.dart';
 import 'view_screen.dart';
 import 'settings_screen.dart';
 
-class ListViewScreen extends StatefulWidget {
-  final NoteService noteService;
+class ListViewScreen extends ConsumerStatefulWidget {
   final String? initialSearchQuery;
   final Function(ThemeMode)? onThemeChanged;
   final ThemeMode? currentThemeMode;
 
   const ListViewScreen({
     super.key,
-    required this.noteService,
     this.initialSearchQuery,
     this.onThemeChanged,
     this.currentThemeMode,
   });
 
   @override
-  State<ListViewScreen> createState() => _ListViewScreenState();
+  ConsumerState<ListViewScreen> createState() => _ListViewScreenState();
 }
 
-class _ListViewScreenState extends State<ListViewScreen> {
+class _ListViewScreenState extends ConsumerState<ListViewScreen> {
   List<Note> _notes = [];
   List<Note> _filteredNotes = [];
   bool _isLoading = true;
@@ -62,7 +62,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
   }
 
   Future<void> _loadHotkeys() async {
-    final config = await widget.noteService.configService.loadConfig();
+    final config = await ref.read(configServiceProvider).loadConfig();
     if (mounted) {
       setState(() {
         _hotkeys = config.hotkeys;
@@ -99,7 +99,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
   Future<void> _loadNotes() async {
     setState(() => _isLoading = true);
 
-    final notes = await widget.noteService.getAllNotes();
+    final notes = await ref.read(noteServiceProvider).getAllNotes();
 
     setState(() {
       _notes = notes;
@@ -170,7 +170,6 @@ class _ListViewScreenState extends State<ListViewScreen> {
       context,
       MaterialPageRoute(
         builder: (context) => ViewScreen(
-          noteService: widget.noteService,
           noteId: note.id,
           onThemeChanged: widget.onThemeChanged,
           currentThemeMode: widget.currentThemeMode,
@@ -189,8 +188,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
             .getHandler(note.types)
             .buildEditor(
               context: context,
+              noteService: ref.read(noteServiceProvider) as NoteService,
               note: note,
-              noteService: widget.noteService,
               onComplete: (saved) => Navigator.pop(context, saved),
             ),
       ),
@@ -207,7 +206,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
     final result = await _showCreateNoteDialog();
     if (result != null && result.isNotEmpty) {
       // Check if note(s) with this title already exist
-      final existingNotes = await widget.noteService.getNotesByTitle(result);
+      final existingNotes = await ref.read(noteServiceProvider).getNotesByTitle(result);
 
       if (existingNotes.isNotEmpty) {
         // Note(s) with this title already exist
@@ -221,8 +220,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
                     .getHandler(existingNotes.first.types)
                     .buildEditor(
                       context: context,
+              noteService: ref.read(noteServiceProvider) as NoteService,
                       note: existingNotes.first,
-                      noteService: widget.noteService,
                       onComplete: (saved) => Navigator.pop(context, saved),
                     ),
               ),
@@ -238,7 +237,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
         }
       } else {
         // Note doesn't exist - create it with specified type
-        final newNote = await widget.noteService.createNote(
+        final newNote = await ref.read(noteServiceProvider).createNote(
           title: result,
           text: '# $result\n\n',
           types: [noteType],
@@ -252,8 +251,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
                   .getHandler(newNote.types)
                   .buildEditor(
                     context: context,
+              noteService: ref.read(noteServiceProvider) as NoteService,
                     note: newNote,
-                    noteService: widget.noteService,
                     onComplete: (saved) => Navigator.pop(context, saved),
                   ),
             ),
@@ -326,8 +325,8 @@ class _ListViewScreenState extends State<ListViewScreen> {
                             .getHandler(note.types)
                             .buildEditor(
                               context: context,
+              noteService: ref.read(noteServiceProvider) as NoteService,
                               note: note,
-                              noteService: widget.noteService,
                               onComplete: (saved) => Navigator.pop(context, saved),
                             ),
                       ),
@@ -372,7 +371,7 @@ class _ListViewScreenState extends State<ListViewScreen> {
                   context,
                   MaterialPageRoute(
                     builder: (context) => SettingsScreen(
-                      configService: widget.noteService.configService,
+                      configService: ref.read(configServiceProvider),
                       onThemeChanged: widget.onThemeChanged,
                       currentThemeMode: widget.currentThemeMode,
                     ),
